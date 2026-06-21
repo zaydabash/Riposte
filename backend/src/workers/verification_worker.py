@@ -126,7 +126,7 @@ class VerificationRunner:
         scenario: TechniqueScenario,
         step: BrowserStep,
     ) -> str:
-        await asyncio.sleep(0.06)
+        await asyncio.sleep(0.35)
         if step.action == "navigate":
             return f"Loaded {scenario.fixture_url(self._settings.fixture_server_url)}"
         if step.action == "fill" and step.selector:
@@ -293,6 +293,7 @@ async def _step_progress(
         step_index=index,
         step_status=VerificationStepStatus.RUNNING,
     )
+    await asyncio.sleep(0.25)
     await _emit(
         on_progress,
         task,

@@ -90,14 +90,25 @@ export function sessionKey(session: VerificationSession): string {
   return session.task_id;
 }
 
-/** Prefer the actively running session; otherwise first incomplete; else last. */
+/** Prefer the actively running session; otherwise evaluating, queued, else last. */
 export function deriveActiveSessionIndex(sessions: readonly VerificationSession[]): number {
   if (sessions.length === 0) return 0;
-  const running = sessions.findIndex((s) => s.status === "running");
-  if (running >= 0) return running;
-  const queued = sessions.findIndex((s) => s.status === "queued");
-  if (queued >= 0) return queued;
+  for (const status of ["running", "evaluating", "queued"] as const) {
+    const index = sessions.findIndex((s) => s.status === status);
+    if (index >= 0) return index;
+  }
   return sessions.length - 1;
+}
+
+export function sessionStepProgress(session: VerificationSession): {
+  completed: number;
+  total: number;
+  ratio: number;
+} {
+  const total = session.steps.length;
+  if (total === 0) return { completed: 0, total: 0, ratio: 0 };
+  const completed = session.steps.filter((s) => s.status === "completed").length;
+  return { completed, total, ratio: completed / total };
 }
 
 // --- diffs -----------------------------------------------------------------

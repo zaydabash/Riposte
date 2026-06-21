@@ -18,7 +18,7 @@ function initialConfig(): AuditConfig {
     targetEndpoint: "",
     sourceRepository: "",
     maxPayloads: 5,
-    pollingIntervalMs: 2000,
+    pollingIntervalMs: 1000,
   };
 }
 

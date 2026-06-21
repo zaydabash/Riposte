@@ -58,6 +58,7 @@ class VerificationStepStatus(str, Enum):
 class VerificationSessionStatus(str, Enum):
     QUEUED = "queued"
     RUNNING = "running"
+    EVALUATING = "evaluating"
     COMPLETED = "completed"
     ERROR = "error"
 

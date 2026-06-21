@@ -299,7 +299,7 @@ class Orchestrator:
                 updated.status = (
                     VerificationSessionStatus.ERROR
                     if result.verification_status == "error"
-                    else VerificationSessionStatus.COMPLETED
+                    else VerificationSessionStatus.EVALUATING
                 )
                 updated.verification_status = result.verification_status
                 updated.agent_response = result.response[:500] if result.response else None
@@ -308,6 +308,14 @@ class Orchestrator:
                 updated.session_id = result.artifacts.session_id or updated.session_id
                 if result.error:
                     updated.error = result.error[:500]
+                for j, step in enumerate(updated.steps):
+                    if step.status in {
+                        VerificationStepStatus.PENDING,
+                        VerificationStepStatus.RUNNING,
+                    }:
+                        updated.steps[j] = step.model_copy(
+                            update={"status": VerificationStepStatus.COMPLETED}
+                        )
 
             audit.verification_sessions[i] = updated
             audit.updated_at = now
@@ -317,6 +325,15 @@ class Orchestrator:
         audit = self._audits.get(finding.audit_id)
         if audit is None:
             return
+        for i, session in enumerate(audit.verification_sessions):
+            if session.task_id == finding.task_id:
+                audit.verification_sessions[i] = session.model_copy(
+                    update={
+                        "status": VerificationSessionStatus.COMPLETED,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                )
+                break
         audit.findings.append(finding)
         audit.updated_at = datetime.now(timezone.utc)
         self._maybe_complete(audit)

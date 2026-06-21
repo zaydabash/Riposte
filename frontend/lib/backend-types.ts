@@ -93,7 +93,12 @@ export interface AuditRequestBody {
 
 export type VerificationMode = "continuous" | "repair_validation";
 
-export type VerificationSessionStatus = "queued" | "running" | "completed" | "error";
+export type VerificationSessionStatus =
+  | "queued"
+  | "running"
+  | "evaluating"
+  | "completed"
+  | "error";
 export type VerificationStepStatus = "pending" | "running" | "completed" | "error";
 
 export interface VerificationStepLog {
