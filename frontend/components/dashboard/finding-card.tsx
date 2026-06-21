@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, FileWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Finding } from "@/lib/backend-types";
-import { formatClock } from "@/lib/format";
+import { formatClock, getMitreUrl } from "@/lib/format";
 import { AriesScoreBadge } from "@/components/dashboard/aries-score-badge";
 import { AriesBreakdown } from "@/components/dashboard/aries-breakdown";
 

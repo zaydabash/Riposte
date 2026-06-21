@@ -88,7 +88,15 @@ void main(){gl_Position=position;}`;
   constructor(canvas: HTMLCanvasElement, scale: number) {
     this.canvas = canvas;
     this.scale = scale;
-    this.gl = canvas.getContext("webgl2")!;
+    const gl = canvas.getContext("webgl2");
+    if (!gl) {
+      // WebGL2 is unavailable (headless browsers, disabled hardware
+      // acceleration, older Safari). Bail out clearly so the caller can fall
+      // back to the plain black background instead of crashing on the next
+      // gl.* call.
+      throw new Error("WebGL2 is not supported in this browser");
+    }
+    this.gl = gl;
     this.gl.viewport(0, 0, canvas.width * scale, canvas.height * scale);
     this.shaderSource = defaultShaderSource;
   }
@@ -317,10 +325,18 @@ function useShaderBackground() {
     const canvas = canvasRef.current;
     const dpr = Math.max(1, 0.5 * window.devicePixelRatio);
 
-    rendererRef.current = new WebGLRenderer(canvas, dpr);
+    try {
+      rendererRef.current = new WebGLRenderer(canvas, dpr);
+      rendererRef.current.setup();
+      rendererRef.current.init();
+    } catch (err) {
+      // No WebGL2 support: leave the canvas as the plain black background
+      // (already styled on the wrapping element) instead of crashing.
+      console.warn("HeroShader disabled:", err);
+      rendererRef.current = null;
+      return;
+    }
     pointersRef.current = new PointerHandler(canvas, dpr);
-    rendererRef.current.setup();
-    rendererRef.current.init();
 
     const resize = () => {
       if (!canvasRef.current) return;
