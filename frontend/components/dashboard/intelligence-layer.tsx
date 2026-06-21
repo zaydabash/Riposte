@@ -27,33 +27,33 @@ const BAND_CLASS: Record<ReturnType<typeof ariesBand>, string> = {
   high: "text-[var(--status-vulnerable)]",
 };
 
-/** Human-readable label for the remediation `status` (PR creation outcome). */
+/** Human-readable label for the remediation `status` (Issue creation outcome). */
 const REMEDIATION_STATUS_LABEL: Record<string, string> = {
-  pr_created: "PR Created",
+  issue_created: "Issue Created",
   unavailable: "Unavailable",
   failed: "Failed",
   error: "Error",
 };
 
-/** Color for the PR-creation status — pr_created is a success. */
+/** Color for the Issue-creation status — issue_created is a success. */
 function remediationStatusClass(status: string): string {
-  if (status === "pr_created") return "text-[var(--status-safe)]";
+  if (status === "issue_created") return "text-[var(--status-safe)]";
   if (status === "failed" || status === "error") return "text-[var(--status-vulnerable)]";
   return "text-muted";
 }
 
-/** Re-verification (repair validation) outcome — distinct from PR creation. */
+/** Re-verification (repair validation) outcome — distinct from issue creation. */
 const VALIDATION_LABEL: Record<string, string> = {
   validated: "verified",
   failed: "still vulnerable",
   pending: "re-verifying…",
-  awaiting_merge: "awaiting human merge",
+  awaiting_fix: "awaiting human fix",
 };
 
 function validationClass(status: string): string {
   if (status === "validated") return "text-[var(--status-safe)]";
   if (status === "failed") return "text-[var(--status-vulnerable)]";
-  if (status === "awaiting_merge") return "text-[var(--accent-orange)]";
+  if (status === "awaiting_fix") return "text-[var(--accent-orange)]";
   return "text-muted";
 }
 
@@ -216,18 +216,18 @@ export function IntelligenceLayer({
                 <p className="mt-0.5 truncate font-mono text-[10px] text-muted">
                   {r.repo_url}
                 </p>
-                {r.pr_url ? (
+                {r.issue_url ? (
                   <a
-                    href={r.pr_url}
+                    href={r.issue_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-accent hover:underline"
                   >
-                    <ExternalLink size={10} /> View PR
+                    <ExternalLink size={10} /> View Issue
                   </a>
                 ) : (
                   <p className="mt-1 font-mono text-[10px] text-muted/60">
-                    PR pending, no URL yet
+                    Issue pending, no URL yet
                   </p>
                 )}
               </li>

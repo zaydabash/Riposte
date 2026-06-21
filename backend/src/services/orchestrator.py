@@ -518,14 +518,14 @@ class Orchestrator:
         if audit is None:
             return
 
-        # A successful remediation opens a HITL pull request that is never merged
+        # A successful remediation opens a HITL issue that is never merged
         # automatically (per the project constitution). The live target therefore
         # still serves the unpatched code, so an immediate re-verification would
-        # always report the control as still failing. We surface "awaiting_merge"
+        # always report the control as still failing. We surface "awaiting_fix"
         # instead of running a structurally-doomed re-audit; a post-merge
         # re-validation can be triggered explicitly via a REPAIR_VALIDATION audit.
-        pr_created = result.status == "pr_created" and bool(result.pr_url)
-        initial_validation = "awaiting_merge" if pr_created else None
+        issue_created = result.status == "issue_created" and bool(result.issue_url)
+        initial_validation = "awaiting_fix" if issue_created else None
         enriched = result.model_copy(update={"validation_status": initial_validation})
         audit.remediations.append(enriched)
         audit.updated_at = datetime.now(timezone.utc)

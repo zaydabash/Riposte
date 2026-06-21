@@ -164,3 +164,35 @@ class GitHubClient:
             evidence_screenshot_url=evidence_screenshot_url,
             evidence_hud_link=evidence_hud_link,
         )
+
+    async def create_issue(
+        self,
+        repo_full_name: str,
+        title: str,
+        body: str,
+        evidence_screenshot_url: Optional[str] = None,
+        evidence_hud_link: Optional[str] = None,
+    ) -> str:
+        """Open an issue with title and body."""
+        if not self._token:
+            raise RuntimeError("GitHub token is not configured.")
+        base_url = self._get_base_url(repo_full_name)
+
+        description = body
+        if evidence_screenshot_url or evidence_hud_link:
+            description += "\n\n---\n**Evidence**\n"
+            if evidence_screenshot_url:
+                description += f"\n- Screenshot: {evidence_screenshot_url}\n"
+            if evidence_hud_link:
+                description += f"\n- HUD / session: {evidence_hud_link}\n"
+
+        payload = {
+            "title": title,
+            "body": description,
+        }
+
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            r = await client.post(f"{base_url}/issues", headers=self._headers, json=payload)
+            r.raise_for_status()
+            issue = r.json()
+            return issue["html_url"]

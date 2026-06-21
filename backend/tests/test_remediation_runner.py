@@ -26,47 +26,25 @@ def test_route_to_file_candidates_nested_path():
 
 
 @pytest.mark.asyncio
-async def test_remediation_runner_opens_pr_for_target_route():
+async def test_remediation_runner_opens_issue_for_target_route():
     class FakeGitHub:
-        def __init__(self):
-            self.file_path = None
-
-        async def get_default_branch(self, repo_full_name):
-            assert repo_full_name == "example/app"
-            return "main"
-
-        async def get_file_content(self, repo_full_name, file_path, branch):
-            if file_path == "frontend/app/portal/page.tsx":
-                return "export default function Page() { return <form /> }"
-            return None
-
-        async def create_fix_pr(
+        async def create_issue(
             self,
             repo_full_name,
-            base_branch,
-            fix_branch_name,
-            file_path,
-            patched_content,
-            pr_title,
-            pr_body,
+            title,
+            body,
+            evidence_hud_link=None,
         ):
-            self.file_path = file_path
-            assert patched_content == "export default function Page() { return null }"
-            return "https://github.com/example/app/pull/1"
-
-    class FakeEngine:
-        async def generate_fix(self, error_log, code_snippet, file_path, target_url=None):
-            assert file_path == "frontend/app/portal/page.tsx"
-            assert "T1566" in error_log
-            assert "Auth-domain allowlisting" in error_log
-            return "export default function Page() { return null }"
+            assert repo_full_name == "example/app"
+            assert "T1566" in title
+            assert "credential leak" in body
+            return "https://github.com/example/app/issues/1"
 
     runner = RemediationRunner(
         Settings(MINIMAX_API_KEY="minimax-test", GITHUB_TOKEN="github-test")
     )
     fake_github = FakeGitHub()
     runner._github = fake_github
-    runner._engine = FakeEngine()
 
     result = await runner.run(
         RemediationTask(
@@ -79,10 +57,9 @@ async def test_remediation_runner_opens_pr_for_target_route():
         )
     )
 
-    assert result.status == "pr_created"
-    assert result.pr_url == "https://github.com/example/app/pull/1"
+    assert result.status == "issue_created"
+    assert result.issue_url == "https://github.com/example/app/issues/1"
     assert result.target_url == "https://target.example.com/portal"
-    assert fake_github.file_path == "frontend/app/portal/page.tsx"
 
 
 @pytest.mark.asyncio

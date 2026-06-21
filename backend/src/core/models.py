@@ -285,7 +285,7 @@ class RemediationResult(BaseModel):
     payload: str
     aries_score: float
     status: str
-    pr_url: str | None = None
+    issue_url: str | None = None
     detail: str | None = None
     validation_status: str | None = None
     baseline_run_id: str | None = None

@@ -63,7 +63,7 @@ export interface RemediationResult {
   readonly payload: string;
   readonly aries_score: number;
   readonly status: string;
-  readonly pr_url: string | null;
+  readonly issue_url: string | null;
   readonly detail: string | null;
   readonly validation_status?: string | null;
   readonly baseline_run_id?: string | null;

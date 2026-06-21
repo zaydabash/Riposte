@@ -320,7 +320,7 @@ describe("deriveActiveStage (conceptual overlay)", () => {
           payload: "p",
           aries_score: 90,
           status: "unavailable",
-          pr_url: null,
+          issue_url: null,
           detail: null,
           created_at: "2026-06-20T10:00:05Z",
         },

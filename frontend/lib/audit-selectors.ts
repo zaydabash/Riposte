@@ -291,7 +291,7 @@ export function deriveAlerts(
       type: "new_remediation",
       severity: "high",
       title: `Remediation · ${r.status}`,
-      detail: r.pr_url ?? truncate(r.payload, 120),
+      detail: r.issue_url ?? truncate(r.payload, 120),
       createdAt: r.created_at,
       ariesScore: r.aries_score,
     });

@@ -72,7 +72,7 @@ const topics: Topic[] = [
 ];
 
 export function HowItWorksSection() {
-  const [openId, setOpenId] = useState<string | null>(topics[0].id);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section className="relative isolate overflow-hidden px-6 py-24 md:px-12">
@@ -84,12 +84,10 @@ export function HowItWorksSection() {
               How It Works
             </p>
             <h2 className="mt-2 text-3xl tracking-tight text-foreground md:text-4xl">
-              Plain English first. The math is right there if you want it.
+              The mechanics behind the audit
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted md:text-base">
-              The five pillars above are <em>what</em> Riposte runs. This is{" "}
-              <em>why</em> each piece works the way it does — click any card to
-              expand the formal definition.
+              The five pillars above outline <em>what</em> Riposte runs. Below is a breakdown of <em>why</em> each piece works the way it does — click any card to view the formal mathematical definitions.
             </p>
           </div>
         </ScrollReveal>
