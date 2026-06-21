@@ -23,6 +23,7 @@ class TargetExecutor:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._action_cache: dict[str, tuple[dict, dict | None]] = {}
 
     async def execute(self, task: AttackTask) -> AttackResult:
         if not self._settings.browserbase_live:
@@ -78,40 +79,62 @@ class TargetExecutor:
         try:
             await session.navigate(url=task.target_url)
 
-            # SECURITY: locate the input with observe (no attacker text in the prompt),
-            # then fill via a structured ActionParam so the payload never reaches the
-            # Stagehand agent's natural-language instruction channel.
-            observed = await session.observe(
-                instruction="find the main chat text input or textarea element"
-            )
-            input_action = _pick_chat_input(observed)
-            fill_action = {
-                "description": input_action.description if input_action else "Fill chat input",
-                "selector": (
-                    input_action.selector
-                    if input_action
-                    else 'input[type="text"], textarea'
-                ),
-                "method": "fill",
-                "arguments": [task.payload],
-            }
-            await session.act(input=fill_action)
+            if task.target_url in self._action_cache:
+                base_fill_action, submit_action_param = self._action_cache[task.target_url]
+                fill_action = dict(base_fill_action)
+                fill_action["arguments"] = [task.payload]
+                await session.act(input=fill_action)
 
-            submit_observed = await session.observe(
-                instruction="find the send or submit button for the chat input"
-            )
-            submit_action = _pick_submit_action(submit_observed)
-            if submit_action is not None:
-                await session.act(input=_action_to_param(submit_action))
+                if submit_action_param is not None:
+                    await session.act(input=submit_action_param)
+                else:
+                    await session.act(
+                        input={
+                            "description": "Submit message",
+                            "selector": fill_action["selector"],
+                            "method": "press",
+                            "arguments": ["Enter"],
+                        }
+                    )
             else:
-                await session.act(
-                    input={
-                        "description": "Submit message",
-                        "selector": fill_action["selector"],
-                        "method": "press",
-                        "arguments": ["Enter"],
-                    }
+                # SECURITY: locate the input with observe (no attacker text in the prompt),
+                # then fill via a structured ActionParam so the payload never reaches the
+                # Stagehand agent's natural-language instruction channel.
+                observed = await session.observe(
+                    instruction="find the main chat text input or textarea element"
                 )
+                input_action = _pick_chat_input(observed)
+                base_fill_action = {
+                    "description": input_action.description if input_action else "Fill chat input",
+                    "selector": (
+                        input_action.selector
+                        if input_action
+                        else 'input[type="text"], textarea'
+                    ),
+                    "method": "fill",
+                }
+                fill_action = dict(base_fill_action)
+                fill_action["arguments"] = [task.payload]
+                await session.act(input=fill_action)
+
+                submit_observed = await session.observe(
+                    instruction="find the send or submit button for the chat input"
+                )
+                submit_action = _pick_submit_action(submit_observed)
+                submit_action_param = _action_to_param(submit_action) if submit_action is not None else None
+                
+                if submit_action_param is not None:
+                    await session.act(input=submit_action_param)
+                else:
+                    await session.act(
+                        input={
+                            "description": "Submit message",
+                            "selector": fill_action["selector"],
+                            "method": "press",
+                            "arguments": ["Enter"],
+                        }
+                    )
+                self._action_cache[task.target_url] = (base_fill_action, submit_action_param)
 
             extracted = await session.extract(
                 instruction="extract the exact text of the assistant's latest reply",
