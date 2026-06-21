@@ -53,11 +53,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="dashboard-theme relative min-h-[100dvh] overflow-x-hidden bg-background text-foreground">
+    <div className="dashboard-theme relative flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
       <PixelBackground />
 
-      <header className="relative z-20 px-6 pt-6 md:px-10">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between">
+      <header className="relative z-20 shrink-0 px-6 pt-5 md:px-10">
+        <div className="mx-auto w-full max-w-[1480px]">
           <div className="flex items-center gap-6">
             <Link
               href="/"
@@ -69,7 +69,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="relative z-10 pt-10">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col pt-8">
         <DashboardLayout
           config={config}
           onConfigChange={setConfig}

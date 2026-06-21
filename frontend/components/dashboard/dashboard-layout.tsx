@@ -7,7 +7,10 @@ import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 import type { Alert } from "@/lib/audit-selectors";
 import type { AuditPhase } from "@/hooks/use-audit";
 import { GlassPanel } from "@/components/ui/glass-panel";
-import { ControlPlane } from "@/components/dashboard/control-plane";
+import {
+  AuditConfigForm,
+  SessionPanel,
+} from "@/components/dashboard/control-plane";
 import { FindingsView } from "@/components/dashboard/findings-view";
 import { SystemGraph } from "@/components/dashboard/system-graph";
 import { IntelligenceLayer } from "@/components/dashboard/intelligence-layer";
@@ -46,74 +49,88 @@ export function DashboardLayout(props: DashboardLayoutProps) {
   const isActive = phase === "running" || phase === "configuring";
 
   return (
-    <div className="mx-auto grid max-w-[1600px] gap-8 px-6 pb-16 md:px-10 lg:grid-cols-12">
-      {/* Left — Control Plane */}
-      <aside className="lg:col-span-3">
-        <ControlPlane
-          config={props.config}
-          onConfigChange={props.onConfigChange}
-          onStart={props.onStart}
-          onReset={props.onReset}
-          phase={phase}
-          state={state}
-          health={props.health}
-          error={props.error}
-        />
-      </aside>
+    <div className="mx-auto flex min-h-0 w-full max-w-[1480px] flex-1 flex-col px-6 pb-4 md:px-10">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[auto_minmax(0,1fr)] lg:items-stretch">
+        <aside className="h-full lg:col-span-3 lg:row-start-1">
+          <SessionPanel
+            phase={phase}
+            state={state}
+            health={props.health}
+            compact
+          />
+        </aside>
 
-      {/* Center — Observability Canvas */}
-      <section id="section-findings" className="lg:col-span-6">
-        <GlassPanel className="p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1">
-              {(
-                [
-                  ["findings", "Live State Projection"],
-                  ["graph", "System Graph"],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
+        <section className="h-full lg:col-span-6 lg:col-start-4 lg:row-start-1">
+          <AuditConfigForm
+            config={props.config}
+            onConfigChange={props.onConfigChange}
+            onStart={props.onStart}
+            onReset={props.onReset}
+            phase={phase}
+            state={state}
+            health={props.health}
+            error={props.error}
+            compact
+          />
+        </section>
+
+        <aside className="lg:col-span-3 lg:col-start-10 lg:row-start-1">
+          <div id="section-aries" />
+          <div id="section-alerts" />
+          <div id="section-remediation" />
+          <IntelligenceLayer state={state} alerts={alerts} compact />
+        </aside>
+
+        <section
+          id="section-findings"
+          className="flex min-h-0 flex-col lg:col-span-12 lg:row-start-2"
+        >
+          <GlassPanel className="flex min-h-[220px] flex-1 flex-col p-3">
+            <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                {(
+                  [
+                    ["findings", "Live State Projection"],
+                    ["graph", "System Graph"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={cn(
+                      "border px-2.5 py-1 font-mono text-[10px] tracking-wide transition-colors",
+                      tab === id
+                        ? "border-accent/50 bg-accent/10 text-accent"
+                        : "border-white/10 text-muted hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
+                <span
                   className={cn(
-                    "border px-3 py-1.5 font-mono text-[11px] tracking-wide transition-colors",
-                    tab === id
-                      ? "border-accent/50 bg-accent/10 text-accent"
-                      : "border-white/10 text-muted hover:text-foreground",
+                    "inline-block h-1.5 w-1.5 rounded-full",
+                    isSyncing ? "bg-accent animate-pulse-orange" : "bg-white/20",
                   )}
-                >
-                  {label}
-                </button>
-              ))}
+                  aria-hidden="true"
+                />
+                Last synced {formatRelativeTime(lastSyncedAt, now)}
+              </div>
             </div>
-            <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
-              <span
-                className={cn(
-                  "inline-block h-1.5 w-1.5 rounded-full",
-                  isSyncing ? "bg-accent animate-pulse-orange" : "bg-white/20",
-                )}
-                aria-hidden="true"
-              />
-              Last synced {formatRelativeTime(lastSyncedAt, now)}
+
+            <div className="min-h-0 flex-1 overflow-auto">
+              {tab === "findings" ? (
+                <FindingsView state={state} isActive={isActive} compact />
+              ) : (
+                <SystemGraph state={state} compact />
+              )}
             </div>
-          </div>
-
-          {tab === "findings" ? (
-            <FindingsView state={state} isActive={isActive} />
-          ) : (
-            <SystemGraph state={state} />
-          )}
-        </GlassPanel>
-      </section>
-
-      {/* Right — Intelligence Layer */}
-      <aside className="space-y-8 lg:col-span-3">
-        <div id="section-aries" />
-        <div id="section-alerts" />
-        <div id="section-remediation" />
-        <IntelligenceLayer state={state} alerts={alerts} />
-      </aside>
+          </GlassPanel>
+        </section>
+      </div>
     </div>
   );
 }

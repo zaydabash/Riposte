@@ -12,6 +12,7 @@ import {
 
 interface SystemGraphProps {
   state: RiposteAuditState | null;
+  compact?: boolean;
 }
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
@@ -27,12 +28,12 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
  * no graph API). The highlighted stage is a heuristic over the most recent
  * finding's dominant ARiES component (see {@link deriveActiveStage}).
  */
-export function SystemGraph({ state }: SystemGraphProps) {
+export function SystemGraph({ state, compact = false }: SystemGraphProps) {
   const active = deriveActiveStage(state);
   const isRunning = state?.status === "running";
 
   return (
-    <div className="space-y-4">
+    <div className={compact ? "space-y-2" : "space-y-4"}>
       <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
         Conceptual pipeline · not backend topology
       </p>
@@ -43,7 +44,8 @@ export function SystemGraph({ state }: SystemGraphProps) {
             <Fragment key={stage}>
               <div
                 className={cn(
-                  "border px-4 py-3 font-mono text-xs tracking-wide transition-colors",
+                  "border font-mono tracking-wide transition-colors",
+                  compact ? "px-2.5 py-1.5 text-[10px]" : "px-4 py-3 text-xs",
                   isActive
                     ? "border-accent/60 bg-accent/10 text-accent"
                     : "border-white/10 bg-black/30 text-muted",
@@ -60,7 +62,7 @@ export function SystemGraph({ state }: SystemGraphProps) {
         })}
       </div>
       {active === null && (
-        <p className="font-mono text-xs text-muted">
+        <p className={cn("font-mono text-muted", compact ? "text-[10px]" : "text-xs")}>
           Idle. Start an audit to activate the pipeline overlay.
         </p>
       )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Crosshair } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { RiposteAuditState } from "@/lib/backend-types";
 import { findingKey, sortFindings } from "@/lib/audit-selectors";
 import { FindingCard } from "@/components/dashboard/finding-card";
@@ -9,13 +10,18 @@ import { FindingCard } from "@/components/dashboard/finding-card";
 interface FindingsViewProps {
   state: RiposteAuditState | null;
   isActive: boolean;
+  compact?: boolean;
 }
 
 /**
  * Live State Projection — findings as accumulating graph nodes (not a log).
  * Order and sequence indices follow the canonical {@link sortFindings} order.
  */
-export function FindingsView({ state, isActive }: FindingsViewProps) {
+export function FindingsView({
+  state,
+  isActive,
+  compact = false,
+}: FindingsViewProps) {
   const findings = sortFindings(state);
   const seenRef = useRef<Set<string>>(new Set());
 
@@ -26,9 +32,14 @@ export function FindingsView({ state, isActive }: FindingsViewProps) {
 
   if (findings.length === 0) {
     return (
-      <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 border border-dashed border-white/10 p-10 text-center">
-        <Crosshair className="text-muted" size={28} />
-        <p className="font-mono text-sm text-muted">
+      <div
+        className={cn(
+          "flex h-full min-h-[160px] flex-col items-center justify-center gap-2 border border-dashed border-white/10 text-center",
+          compact ? "p-4" : "gap-3 p-10",
+        )}
+      >
+        <Crosshair className="text-muted" size={compact ? 22 : 28} />
+        <p className={cn("font-mono text-muted", compact ? "text-xs" : "text-sm")}>
           {isActive
             ? "Fuzzing in progress. Findings will stream in as the pipeline evaluates payloads."
             : "No findings yet. Start an audit to project live results here."}
