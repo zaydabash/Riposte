@@ -10,5 +10,11 @@
   <div id="error-panel" style="display:none">
     Traceback (most recent call last): ValueError at /api/search
   </div>
+  <script>
+    document.getElementById('public-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      document.getElementById('error-panel').style.display = 'block';
+    });
+  </script>
 </body>
 </html>

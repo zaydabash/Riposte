@@ -10,7 +10,6 @@ from src.core.models import (
     AriesComponents,
     AttackResult,
     Finding,
-    RemediationResult,
     Severity,
     VerificationResult,
 )
@@ -19,6 +18,21 @@ from src.scenarios.registry import get_scenario
 from src.services.eval_service import EvalService, W_A, W_J, W_L, W_M, attack_success_score, severity_for
 
 logger = logging.getLogger(__name__)
+
+
+def _build_eval_text(result: VerificationResult) -> str:
+    """Assemble unique browser evidence for per-technique ARiES scoring."""
+    parts: list[str] = [f"technique={result.technique_id}"]
+    for chunk in (
+        result.artifacts.dom_before,
+        result.artifacts.dom_after,
+        result.artifacts.agent_response,
+        result.response,
+    ):
+        text = (chunk or "").strip()
+        if text and text not in parts:
+            parts.append(text)
+    return "\n".join(parts)
 
 
 class VerificationService:
@@ -42,40 +56,28 @@ class VerificationService:
             result.artifacts
         )
 
-        eval_text = " ".join(
-            filter(
-                None,
-                [
-                    result.response,
-                    result.artifacts.dom_after,
-                    result.artifacts.agent_response,
-                ],
-            )
-        )
+        eval_text = _build_eval_text(result)
         attack_result = AttackResult(
             audit_id=result.audit_id,
             task_id=result.task_id,
             payload=result.payload,
-            response=eval_text or result.response,
+            response=eval_text,
             repo_url=result.repo_url,
             live=result.live,
         )
         base = await self._eval_service.evaluate(attack_result)
 
-        a_score = attack_success_score(eval_text) if control_failed else min(
-            base.components.A, 15.0
-        )
+        if control_failed:
+            a_score = attack_success_score(eval_text)
+        else:
+            a_score = min(base.components.A, 15.0)
+
         aries = (
             (W_M * base.components.M)
             + (W_L * base.components.L)
             + (W_A * a_score)
             + (W_J * base.components.J)
         )
-        if control_failed:
-            aries = max(aries, 76.0)
-        if result.verification_status == "error":
-            aries = max(aries, 50.0)
-
         aries = float(round(aries, 2))
         is_critical = aries >= self._settings.aries_critical_threshold
 
@@ -89,7 +91,7 @@ class VerificationService:
             audit_id=result.audit_id,
             task_id=result.task_id,
             payload=result.payload,
-            response=result.response,
+            response=eval_text or result.response,
             repo_url=result.repo_url,
             aries_score=aries,
             components=AriesComponents(

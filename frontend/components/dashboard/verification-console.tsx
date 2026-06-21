@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Globe,
   MousePointerClick,
   MonitorPlay,
@@ -23,7 +25,36 @@ import {
 interface VerificationConsoleProps {
   state: RiposteAuditState | null;
   isActive: boolean;
+  /** From GET /health — whether live verification can run (Browserbase + Anthropic). */
+  verificationLiveReady?: boolean;
   compact?: boolean;
+}
+
+function sessionLiveLabel(
+  session: VerificationSession,
+  verificationLiveReady: boolean | undefined,
+): string {
+  if (session.live) {
+    return session.session_id
+      ? `Browserbase live · ${session.session_id.slice(0, 8)}`
+      : "Browserbase live";
+  }
+  if (session.error) {
+    return session.error;
+  }
+  if (verificationLiveReady) {
+    if (session.status === "error") {
+      return "Browserbase run failed — see step log and backend logs";
+    }
+    if (session.status === "queued" || session.status === "running") {
+      return "Starting Browserbase session…";
+    }
+    return "This session did not complete a live Browserbase run";
+  }
+  return (
+    "Browserbase not configured — set BROWSERBASE_API_KEY, BROWSERBASE_PROJECT_ID, " +
+    "and ANTHROPIC_API_KEY in backend/.env, then restart"
+  );
 }
 
 const PROGRESS_LABEL: Record<VerificationSession["status"], string> = {
@@ -89,6 +120,7 @@ function stepIcon(action: string) {
 export function VerificationConsole({
   state,
   isActive,
+  verificationLiveReady,
   compact = false,
 }: VerificationConsoleProps) {
   const sessions = sortVerificationSessions(state);
@@ -146,7 +178,11 @@ export function VerificationConsole({
           setSelectedIndex(index);
         }}
       />
-      <SessionConsole session={session} compact={compact} />
+      <SessionConsole
+        session={session}
+        verificationLiveReady={verificationLiveReady}
+        compact={compact}
+      />
     </div>
   );
 }
@@ -270,9 +306,11 @@ function SessionCarouselHeader({
 
 function SessionConsole({
   session,
+  verificationLiveReady,
   compact,
 }: {
   session: VerificationSession;
+  verificationLiveReady?: boolean;
   compact?: boolean;
 }) {
   const activeStep =
@@ -327,11 +365,7 @@ function SessionConsole({
               )}
             </div>
             <span className="font-mono text-[10px] text-muted">
-              {session.live
-                ? session.session_id
-                  ? `Browserbase live · ${session.session_id.slice(0, 8)}`
-                  : "Browserbase live"
-                : "Fixture-only run (Browserbase not active — set VERIFICATION_LIVE_TARGET=true)"}
+              {sessionLiveLabel(session, verificationLiveReady)}
             </span>
           </div>
         </div>
@@ -374,16 +408,51 @@ function SessionConsole({
         </div>
 
         {(session.agent_response || session.dom_after || session.error) && (
-          <div className="border-t border-white/10 px-3 py-2 font-mono text-[10px]">
-            {session.error ? (
-              <p className="text-[var(--status-vulnerable)]">{session.error}</p>
-            ) : (
-              <p className="line-clamp-3 text-foreground/80">
-                {session.agent_response || session.dom_after}
-              </p>
-            )}
-          </div>
+          <SessionOutputFooter session={session} />
         )}
+      </div>
+    </div>
+  );
+}
+
+function SessionOutputFooter({ session }: { session: VerificationSession }) {
+  const [expanded, setExpanded] = useState(false);
+  const outputText = session.error ?? session.agent_response ?? session.dom_after ?? "";
+  const isLong = outputText.length > 240;
+  const preview = isLong && !expanded ? `${outputText.slice(0, 240)}…` : outputText;
+
+  return (
+    <div className="border-t border-white/10 px-3 py-2 font-mono text-[10px]">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="tracking-widest text-muted uppercase">
+          {session.error ? "Error output" : "Full output"}
+        </p>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="inline-flex items-center gap-1 text-muted transition-colors hover:text-foreground"
+          >
+            {expanded ? (
+              <>
+                Collapse <ChevronUp size={12} />
+              </>
+            ) : (
+              <>
+                Expand <ChevronDown size={12} />
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      <div
+        className={cn(
+          "whitespace-pre-wrap break-words",
+          session.error ? "text-[var(--status-vulnerable)]" : "text-foreground/80",
+          expanded && isLong && "max-h-64 overflow-auto",
+        )}
+      >
+        {preview}
       </div>
     </div>
   );
@@ -443,7 +512,7 @@ function BrowserViewport({
           </p>
           <p className="mt-1 font-mono text-[10px] text-muted">
             {session.status === "running"
-              ? `Browserbase ${isLive ? "executing" : "simulating"} step ${completed + 1} of ${total || "?"}` 
+              ? `Browserbase executing step ${completed + 1} of ${total || "?"}`
               : session.status === "evaluating"
                 ? "Browser finished — ARiES scoring in progress"
                 : session.status === "queued"

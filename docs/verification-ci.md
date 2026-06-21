@@ -25,7 +25,8 @@ Default bundle (see `src/scenarios/registry.py`):
 
 Full bundle adds T1659, T1078, T1133, T1195.
 
-Set `VERIFICATION_LIVE_TARGET=true` with Browserbase credentials for live
-confirmation; offline simulation runs in CI by default.
+Browserbase credentials (`BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID`) are
+required for verification runs. Controlled fixtures are served at `/fixtures/*`
+and loaded in a real Browserbase session via Stagehand.
 
 Redis Stack is required for regression memory (`docker compose up -d redis`).

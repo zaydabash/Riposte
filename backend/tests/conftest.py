@@ -1,4 +1,4 @@
-"""Test bootstrap: neutralize all external integrations so the suite runs offline.
+"""Test bootstrap: neutralize external integrations for unit tests.
 
 Environment variables take precedence over the local ``.env`` file in
 pydantic-settings, so setting these to empty disables the real MiniMax /
@@ -21,7 +21,6 @@ _OFFLINE_ENV = {
     "EVAL_WORKERS": "2",
     "REMEDIATION_WORKERS": "1",
     "SCENARIO_MUTATION_STEPS": "2",
-    "VERIFICATION_LIVE_TARGET": "false",
 }
 
 for key, value in _OFFLINE_ENV.items():

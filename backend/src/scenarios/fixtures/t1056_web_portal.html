@@ -9,5 +9,17 @@
     <button type="submit">Access portal</button>
   </form>
   <pre id="portal-log"></pre>
+  <script>
+    function updateLog() {
+      const p = document.getElementById('portal-password').value;
+      document.getElementById('portal-log').textContent =
+        p ? `portal-log: password=${p} stored` : '';
+    }
+    document.getElementById('portal-password').addEventListener('input', updateLog);
+    document.getElementById('portal-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      updateLog();
+    });
+  </script>
 </body>
 </html>

@@ -100,7 +100,7 @@ class AuditRequest(BaseModel):
     target_endpoint: HttpUrl
     source_repository: HttpUrl
     interface_type: InterfaceType = InterfaceType.WEB_UI
-    max_payloads: int = Field(default=5, ge=1, le=50)
+    max_payloads: int = Field(default=10, ge=1, le=50)
     technique_ids: list[str] = Field(default_factory=list)
     verification_mode: VerificationMode = VerificationMode.CONTINUOUS
     baseline_run_id: str | None = None

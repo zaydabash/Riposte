@@ -234,6 +234,7 @@ class Orchestrator:
     def telemetry_status(self) -> dict[str, bool]:
         return {
             "browserbase_live": self._settings.browserbase_live,
+            "verification_live_ready": self._settings.verification_live_ready,
             "minimax_enabled": self._settings.minimax_enabled,
             "redis_available": self._vector_repo.available,
             "redis_vector_search": self._vector_repo.vector_search_available,
@@ -292,7 +293,7 @@ class Orchestrator:
                 if step_status is not None:
                     step.status = step_status
                 if step_detail is not None:
-                    step.detail = step_detail[:500]
+                    step.detail = step_detail[:2000]
                 updated.steps[step_index] = step
 
             if result is not None:
@@ -302,12 +303,12 @@ class Orchestrator:
                     else VerificationSessionStatus.EVALUATING
                 )
                 updated.verification_status = result.verification_status
-                updated.agent_response = result.response[:500] if result.response else None
-                updated.dom_after = result.artifacts.dom_after[:500] if result.artifacts.dom_after else None
+                updated.agent_response = result.response[:2000] if result.response else None
+                updated.dom_after = result.artifacts.dom_after[:2000] if result.artifacts.dom_after else None
                 updated.live = result.live
                 updated.session_id = result.artifacts.session_id or updated.session_id
                 if result.error:
-                    updated.error = result.error[:500]
+                    updated.error = result.error[:2000]
                 for j, step in enumerate(updated.steps):
                     if step.status in {
                         VerificationStepStatus.PENDING,

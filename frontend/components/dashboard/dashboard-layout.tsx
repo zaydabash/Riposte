@@ -123,7 +123,12 @@ export function DashboardLayout(props: DashboardLayoutProps) {
 
             <div className="min-h-0 flex-1 overflow-auto">
               {tab === "console" ? (
-                <VerificationConsole state={state} isActive={isActive} compact />
+                <VerificationConsole
+                  state={state}
+                  isActive={isActive}
+                  verificationLiveReady={props.health?.integrations.verification_live_ready}
+                  compact
+                />
               ) : (
                 <SystemGraph state={state} compact />
               )}

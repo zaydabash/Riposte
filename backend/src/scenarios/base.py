@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from src.scenarios.artifacts import BrowserArtifacts, NetworkEntry, StorageSnapshot
@@ -43,7 +40,7 @@ def describe_browser_step(step: BrowserStep) -> str:
     return step.action
 
 
-class TechniqueScenario(BaseModel, ABC):
+class TechniqueScenario(BaseModel):
     """One ATT&CK-mapped verification scenario."""
 
     technique_id: str
@@ -59,10 +56,6 @@ class TechniqueScenario(BaseModel, ABC):
 
     def fixture_url(self, base: str) -> str:
         return f"{base.rstrip('/')}/{self.fixture_path.lstrip('/')}"
-
-    @abstractmethod
-    def simulate_offline(self, parameters: dict[str, str]) -> BrowserArtifacts:
-        """Deterministic offline run against controlled fixture logic."""
 
     def evaluate_control_failure(self, artifacts: BrowserArtifacts) -> bool:
         """Return True when verification controls failed (risk exposed)."""

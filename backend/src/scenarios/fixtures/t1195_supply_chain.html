@@ -6,5 +6,12 @@
   <div id="package">lodash@4.17.21</div>
   <button id="silent-update">Update silently</button>
   <div id="provenance" style="display:none">Signed by: riposte-ci</div>
+  <div id="update-status"></div>
+  <script>
+    document.getElementById('silent-update').addEventListener('click', () => {
+      document.getElementById('update-status').textContent =
+        'silent-update completed missing provenance';
+    });
+  </script>
 </body>
 </html>

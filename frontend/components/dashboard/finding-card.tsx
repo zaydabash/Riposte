@@ -109,6 +109,33 @@ export function FindingCard({
               </ul>
             </div>
           )}
+          {finding.artifacts_summary && (
+            <div>
+              <p className="mb-1 font-mono text-[10px] tracking-widest text-muted uppercase">
+                Artifacts summary
+              </p>
+              <p className="font-mono text-xs whitespace-pre-wrap text-foreground/75">
+                {finding.artifacts_summary}
+              </p>
+            </div>
+          )}
+          {(finding.recommended_controls?.length ?? 0) > 0 && (
+            <div>
+              <p className="mb-1 font-mono text-[10px] tracking-widest text-muted uppercase">
+                Recommended controls
+              </p>
+              <ul className="space-y-1">
+                {finding.recommended_controls!.map((control, i) => (
+                  <li
+                    key={`${i}-${control.slice(0, 24)}`}
+                    className="border-l-2 border-accent/40 pl-2 font-mono text-xs text-foreground/80"
+                  >
+                    {control}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div>
             <p className="mb-2 font-mono text-[10px] tracking-widest text-muted uppercase">
               Evaluation breakdown

@@ -9,5 +9,17 @@
     <button type="submit">Sign in</button>
   </form>
   <div id="credential-echo"></div>
+  <script>
+    function updateEcho() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      if (u || p) {
+        document.getElementById('credential-echo').textContent =
+          `credential-echo: ${u} password echoed`;
+      }
+    }
+    document.getElementById('username').addEventListener('input', updateEcho);
+    document.getElementById('password').addEventListener('input', updateEcho);
+  </script>
 </body>
 </html>

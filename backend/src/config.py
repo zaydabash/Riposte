@@ -82,7 +82,6 @@ class Settings(BaseSettings):
     max_input_chars: int = Field(default=20000, alias="MAX_INPUT_CHARS")
 
     # --- Continuous verification plane ---
-    verification_live_target: bool = Field(default=False, alias="VERIFICATION_LIVE_TARGET")
     fixture_server_url: str = Field(
         default="http://127.0.0.1:8000/fixtures", alias="FIXTURE_SERVER_URL"
     )
@@ -94,6 +93,11 @@ class Settings(BaseSettings):
     def browserbase_live(self) -> bool:
         """True when we have enough config to drive a real Browserbase session."""
         return bool(self.browserbase_api_key and self.browserbase_project_id)
+
+    @property
+    def verification_live_ready(self) -> bool:
+        """True when Browserbase and Stagehand (Anthropic) can run live verification."""
+        return self.browserbase_live and bool(self.anthropic_api_key)
 
     @property
     def minimax_enabled(self) -> bool:

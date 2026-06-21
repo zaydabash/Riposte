@@ -40,18 +40,18 @@ automatic re-verification of the same ATT&CK scenario.
 technique (e.g. session isolation flags, credential redaction toggles). Redis
 evidence search informs regression prioritization when Stack is available.
 
-## Sponsor integrations (all real, all optional)
+## Sponsor integrations
 
-| Track | Where | Offline fallback |
-|-------|-------|------------------|
-| **Browserbase / Stagehand** | `workers/offensive_worker.py` | Simulated vulnerable target (`live=False`) |
+| Track | Where | When unconfigured |
+|-------|-------|-------------------|
+| **Browserbase / Stagehand** | `workers/verification_worker.py`, `workers/offensive_worker.py` | Verification/execution returns error (`live=False`) |
 | **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Deterministic judge stand-in |
 | **Sentry** | `core/telemetry.py` | Errors logged locally |
 | **Redis Stack** | `repositories/vector_repo.py` | Vector memory skipped |
-| **Anthropic / Claude Code** | `workers/patch_worker.py` | Simulated HITL PR (never merged) |
+| **Anthropic / Claude Code** | `workers/patch_worker.py` | Remediation status `unavailable` |
 
-Every integration degrades gracefully, so the full pipeline runs end-to-end with
-zero credentials configured.
+Browserbase and Claude Code are required for live verification and HITL repair
+respectively; other integrations degrade gracefully.
 
 ## Quick start
 
@@ -75,7 +75,7 @@ curl localhost:8000/health
 ## Tests
 
 ```bash
-uv run pytest            # offline; no credentials required
+uv run pytest            # unit tests; Browserbase/Claude mocked where needed
 uv run pytest --cov=src
 ```
 

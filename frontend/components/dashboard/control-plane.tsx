@@ -250,13 +250,13 @@ export function AuditConfigForm({
         </div>
         <div>
           <label htmlFor="max-payloads" className={labelClass}>
-            Max Payloads
+            ATT&CK Scenarios
           </label>
           <input
             id="max-payloads"
             type="number"
             min={1}
-            max={50}
+            max={10}
             value={config.maxPayloads}
             onChange={(e) => update("maxPayloads", Number(e.target.value))}
             disabled={isActive}

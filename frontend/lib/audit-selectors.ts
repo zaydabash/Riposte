@@ -383,25 +383,44 @@ export const PIPELINE_STAGES: readonly PipelineStage[] = [
 
 /**
  * Conceptual overlay for the continuous verification & repair plane.
- * While running, progress follows findings count; when idle, null.
+ * Derived from verification session status when available; null when idle or done.
  */
 export function deriveActiveStage(state: RiposteAuditState | null): PipelineStage | null {
   if (!state) return null;
+
+  const sessions = sortVerificationSessions(state);
   const findings = sortFindings(state);
+  const criticalCount = findings.filter((f) => f.is_critical).length;
+  const remediationsPending = criticalCount > state.remediations.length;
 
-  if (state.remediations.length > 0 && state.status === "completed") return "repair";
-
-  if (state.status === "running") {
-    if (findings.length === 0) return "plan";
-    if (findings.length < state.queued_payloads) {
-      const n = findings.length;
-      if (n % 3 === 0) return "verify";
-      if (n % 3 === 1) return "evaluate";
-      return "remember";
-    }
-    return "repair";
+  if (state.status === "completed") {
+    if (state.remediations.length > 0) return "repair";
+    return null;
   }
 
-  if (findings.length === 0) return null;
-  return "evaluate";
+  if (state.status === "failed") return null;
+
+  if (sessions.length > 0) {
+    if (sessions.some((s) => s.status === "queued")) return "plan";
+    if (sessions.some((s) => s.status === "running")) return "verify";
+    if (sessions.some((s) => s.status === "evaluating")) return "evaluate";
+
+    const allSessionsDone = sessions.every(
+      (s) => s.status === "completed" || s.status === "error",
+    );
+
+    if (allSessionsDone) {
+      if (findings.length < state.queued_payloads) return "remember";
+      if (remediationsPending) return "repair";
+      return null;
+    }
+  }
+
+  if (state.status === "running" || state.status === "queued") {
+    if (findings.length === 0) return "plan";
+    if (remediationsPending) return "repair";
+    return "verify";
+  }
+
+  return null;
 }

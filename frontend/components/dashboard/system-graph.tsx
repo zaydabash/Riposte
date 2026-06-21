@@ -25,12 +25,13 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
 
 /**
  * Conceptual overlay — NOT derived from backend graph structure (Riposte exposes
- * no graph API). The highlighted stage is a heuristic over the most recent
- * finding's dominant ARiES component (see {@link deriveActiveStage}).
+ * no graph API). The highlighted stage follows verification session status
+ * (see {@link deriveActiveStage}).
  */
 export function SystemGraph({ state, compact = false }: SystemGraphProps) {
   const active = deriveActiveStage(state);
   const isRunning = state?.status === "running";
+  const isComplete = state?.status === "completed";
 
   return (
     <div className={compact ? "space-y-2" : "space-y-4"}>
@@ -63,7 +64,9 @@ export function SystemGraph({ state, compact = false }: SystemGraphProps) {
       </div>
       {active === null && (
         <p className={cn("font-mono text-muted", compact ? "text-[10px]" : "text-xs")}>
-          Idle — start a verification run to activate the pipeline.
+          {isComplete
+            ? "Complete — verification pipeline finished."
+            : "Idle — start a verification run to activate the pipeline."}
         </p>
       )}
     </div>

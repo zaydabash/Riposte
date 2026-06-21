@@ -4,6 +4,7 @@ import type {
   Finding,
   RiposteAuditState,
   Severity,
+  VerificationSession,
 } from "@/lib/backend-types";
 import {
   deriveActiveStage,
@@ -185,20 +186,104 @@ describe("deriveAlerts dedupe", () => {
 });
 
 describe("deriveActiveStage (conceptual overlay)", () => {
-  it("pulses plan when running with no findings", () => {
-    expect(deriveActiveStage(makeState({ status: "running" }))).toBe("plan");
+  function makeSession(
+    over: Partial<VerificationSession> & Pick<VerificationSession, "task_id" | "status">,
+  ): VerificationSession {
+    return {
+      technique_id: "T1189",
+      technique_name: "Drive-by Compromise",
+      fixture_url: "http://127.0.0.1:8000/fixtures/t1189_driveby.html",
+      live: false,
+      current_step_index: 0,
+      steps: [],
+      updated_at: "2026-06-20T10:00:00Z",
+      ...over,
+    };
+  }
+
+  it("pulses plan when running with queued sessions", () => {
+    const state = makeState({
+      status: "running",
+      queued_payloads: 2,
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "queued" }),
+        makeSession({ task_id: "t2", status: "queued" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBe("plan");
   });
+
+  it("returns null when completed with findings but no remediations", () => {
+    const state = makeState({
+      status: "completed",
+      queued_payloads: 1,
+      findings: [makeFinding()],
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "completed" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBeNull();
+  });
+
   it("returns null when idle with no findings", () => {
     expect(deriveActiveStage(makeState({ status: "completed" }))).toBeNull();
   });
-  it("cycles verify/evaluate while running with partial findings", () => {
-    const f = makeFinding({ components: { M: 10, L: 95, A: 20, J: 5 } });
-    expect(
-      deriveActiveStage(
-        makeState({ status: "running", queued_payloads: 5, findings: [f] }),
-      ),
-    ).toBe("evaluate");
+
+  it("shows verify when a session is running", () => {
+    const state = makeState({
+      status: "running",
+      queued_payloads: 2,
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "completed" }),
+        makeSession({ task_id: "t2", status: "running" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBe("verify");
   });
+
+  it("shows evaluate when a session is scoring", () => {
+    const state = makeState({
+      status: "running",
+      queued_payloads: 2,
+      findings: [makeFinding({ task_id: "t1" })],
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "completed" }),
+        makeSession({ task_id: "t2", status: "evaluating" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBe("evaluate");
+  });
+
+  it("shows remember when sessions are done but findings are still accumulating", () => {
+    const state = makeState({
+      status: "running",
+      queued_payloads: 3,
+      findings: [makeFinding({ task_id: "t1" })],
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "completed" }),
+        makeSession({ task_id: "t2", status: "completed" }),
+        makeSession({ task_id: "t3", status: "completed" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBe("remember");
+  });
+
+  it("shows repair when critical remediations are pending", () => {
+    const state = makeState({
+      status: "running",
+      queued_payloads: 2,
+      findings: [
+        makeFinding({ task_id: "t1", is_critical: true }),
+        makeFinding({ task_id: "t2", is_critical: true }),
+      ],
+      verification_sessions: [
+        makeSession({ task_id: "t1", status: "completed" }),
+        makeSession({ task_id: "t2", status: "completed" }),
+      ],
+    });
+    expect(deriveActiveStage(state)).toBe("repair");
+  });
+
   it("shows repair when completed with remediations", () => {
     const f = makeFinding();
     const state = makeState({
@@ -210,7 +295,7 @@ describe("deriveActiveStage (conceptual overlay)", () => {
           repo_url: "r",
           payload: "p",
           aries_score: 90,
-          status: "pr_simulated",
+          status: "unavailable",
           pr_url: null,
           detail: null,
           created_at: "2026-06-20T10:00:05Z",

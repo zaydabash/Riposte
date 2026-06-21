@@ -15,6 +15,7 @@ from src.core.models import (
     VerificationSessionStatus,
     VerificationStepStatus,
 )
+from src.scenarios.artifacts import BrowserArtifacts
 from src.scenarios.base import BrowserStep, TechniqueScenario, describe_browser_step
 from src.scenarios.registry import get_scenario
 
@@ -22,9 +23,26 @@ logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[..., Awaitable[None]]
 
+_STEP_LOG_LIMIT = 200
+_EXTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {"text": {"type": "string"}},
+    "required": ["text"],
+}
+
+# Map fixture field ids to scenario parameter keys.
+_FILL_PARAM_ALIASES: dict[str, str] = {
+    "username": "test_user",
+    "password": "test_password",
+    "email": "test_email",
+    "portal-password": "test_password",
+    "paste-target": "test_paste",
+    "query": "test_query",
+}
+
 
 class VerificationRunner:
-    """Runs one ATT&CK scenario, live via Stagehand or offline via controlled simulation."""
+    """Runs one ATT&CK scenario via Browserbase + Stagehand."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -37,111 +55,76 @@ class VerificationRunner:
         scenario = get_scenario(task.technique_id)
         payload_label = f"{task.technique_id}: {scenario.technique_name}"
 
-        use_live = self._settings.verification_live_target and self._settings.browserbase_live
-        if use_live:
-            try:
-                artifacts = await self._run_live(task, scenario, on_progress)
-                control_failed = scenario.evaluate_control_failure(artifacts)
-                result = VerificationResult(
-                    audit_id=task.audit_id,
-                    task_id=task.task_id,
-                    technique_id=task.technique_id,
-                    payload=payload_label,
-                    response=artifacts.agent_response or artifacts.dom_after,
-                    repo_url=task.repo_url,
-                    live=True,
-                    verification_status="fail" if control_failed else "pass",
-                    control_failed=control_failed,
-                    artifacts=artifacts,
-                    verification_mode=task.verification_mode,
-                    baseline_run_id=task.baseline_run_id,
-                )
-                await _emit(on_progress, task, result=result)
-                return result
-            except Exception as exc:
-                logger.error(
-                    "Live verification failed for %s: %s",
-                    task.technique_id,
-                    exc,
-                    exc_info=True,
-                )
-                offline = scenario.simulate_offline(task.parameters)
-                result = VerificationResult(
-                    audit_id=task.audit_id,
-                    task_id=task.task_id,
-                    technique_id=task.technique_id,
-                    payload=payload_label,
-                    response=offline.agent_response,
-                    repo_url=task.repo_url,
-                    live=False,
-                    verification_status="error",
-                    control_failed=True,
-                    artifacts=offline,
-                    error=str(exc)[:500],
-                    verification_mode=task.verification_mode,
-                    baseline_run_id=task.baseline_run_id,
-                )
-                await _emit(on_progress, task, result=result)
-                return result
+        if not self._settings.browserbase_live:
+            from src.core.simulator import simulate_target_response
+            from src.demos.fixtures import PRIVATE_CORPUS
+            
+            response = simulate_target_response(task.payload, list(PRIVATE_CORPUS))
+            artifacts = BrowserArtifacts(
+                technique_id=task.technique_id,
+                dom_after=response,
+                agent_response=response,
+            )
+            control_failed = scenario.evaluate_control_failure(artifacts)
+            
+            result = VerificationResult(
+                audit_id=task.audit_id,
+                task_id=task.task_id,
+                technique_id=task.technique_id,
+                payload=payload_label,
+                response=response,
+                repo_url=task.repo_url,
+                live=False,
+                verification_status="fail" if control_failed else "pass",
+                control_failed=control_failed,
+                artifacts=artifacts,
+                verification_mode=task.verification_mode,
+                baseline_run_id=task.baseline_run_id,
+            )
+            await _emit(
+                on_progress,
+                task,
+                session_status=VerificationSessionStatus.COMPLETED,
+                live=False,
+                result=result,
+            )
+            return result
 
-        artifacts = await self._run_offline(task, scenario, on_progress)
-        control_failed = scenario.evaluate_control_failure(artifacts)
-        result = VerificationResult(
-            audit_id=task.audit_id,
-            task_id=task.task_id,
-            technique_id=task.technique_id,
-            payload=payload_label,
-            response=artifacts.agent_response or artifacts.dom_after,
-            repo_url=task.repo_url,
-            live=False,
-            verification_status="fail" if control_failed else "pass",
-            control_failed=control_failed,
-            artifacts=artifacts,
-            verification_mode=task.verification_mode,
-            baseline_run_id=task.baseline_run_id,
-        )
-        await _emit(on_progress, task, result=result)
-        return result
-
-    async def _run_offline(
-        self,
-        task: ScenarioTask,
-        scenario: TechniqueScenario,
-        on_progress: ProgressCallback | None,
-    ):
-        await _emit(
-            on_progress,
-            task,
-            session_status=VerificationSessionStatus.RUNNING,
-            live=False,
-        )
-        for index, step in enumerate(scenario.browser_steps):
-            detail = await self._execute_offline_step(task, scenario, step)
-            await _step_progress(on_progress, task, index, detail)
-        return scenario.simulate_offline(task.parameters)
-
-    async def _execute_offline_step(
-        self,
-        task: ScenarioTask,
-        scenario: TechniqueScenario,
-        step: BrowserStep,
-    ) -> str:
-        await asyncio.sleep(0.35)
-        if step.action == "navigate":
-            return f"Loaded {scenario.fixture_url(self._settings.fixture_server_url)}"
-        if step.action == "fill" and step.selector:
-            return f"Filled {step.selector} with test value"
-        if step.action == "click" and step.selector:
-            return f"Clicked {step.selector}"
-        if step.action == "extract":
-            preview = scenario.simulate_offline(task.parameters).agent_response
-            return truncate(preview, 120) or "Extracted page evidence"
-        if step.action == "snapshot":
-            preview = scenario.simulate_offline(task.parameters).dom_before
-            return truncate(preview, 120) or "Captured DOM snapshot"
-        if step.action == "wait":
-            return "Waited for page settle"
-        return describe_browser_step(step)
+        try:
+            artifacts = await self._run_live(task, scenario, on_progress)
+            control_failed = scenario.evaluate_control_failure(artifacts)
+            result = VerificationResult(
+                audit_id=task.audit_id,
+                task_id=task.task_id,
+                technique_id=task.technique_id,
+                payload=payload_label,
+                response=artifacts.agent_response or artifacts.dom_after,
+                repo_url=task.repo_url,
+                live=True,
+                verification_status="fail" if control_failed else "pass",
+                control_failed=control_failed,
+                artifacts=artifacts,
+                verification_mode=task.verification_mode,
+                baseline_run_id=task.baseline_run_id,
+            )
+            await _emit(on_progress, task, result=result)
+            return result
+        except Exception as exc:
+            logger.error(
+                "Live verification failed for %s: %s",
+                task.technique_id,
+                exc,
+                exc_info=True,
+            )
+            result = _error_result(task, payload_label, str(exc)[:500])
+            await _emit(
+                on_progress,
+                task,
+                session_status=VerificationSessionStatus.ERROR,
+                live=False,
+                result=result,
+            )
+            return result
 
     @retry(
         wait=wait_exponential(multiplier=1, min=1, max=8),
@@ -155,8 +138,6 @@ class VerificationRunner:
         on_progress: ProgressCallback | None,
     ):
         from stagehand import AsyncStagehand
-
-        from src.scenarios.artifacts import BrowserArtifacts, NetworkEntry, StorageSnapshot
 
         fixture_url = scenario.fixture_url(self._settings.fixture_server_url)
         client = AsyncStagehand(
@@ -182,43 +163,33 @@ class VerificationRunner:
 
         dom_before = ""
         dom_after = ""
-        agent_response = ""
         try:
             for index, step in enumerate(scenario.browser_steps):
-                detail = await self._execute_live_step(
+                log_detail, extracted = await self._execute_live_step(
                     session,
                     task,
+                    scenario,
                     fixture_url,
                     step,
                 )
-                if step.action == "snapshot":
-                    dom_before = detail
-                elif step.action in {"extract", "navigate"}:
-                    dom_after = detail
-                    agent_response = detail
-                await _step_progress(on_progress, task, index, detail)
+                if step.action == "snapshot" and extracted:
+                    dom_before = extracted
+                elif step.action == "extract" and extracted:
+                    dom_after = extracted
+                await _step_progress(on_progress, task, index, log_detail)
 
-            if not dom_after:
-                extracted = await session.extract(
-                    instruction="extract visible page text",
-                    schema={
-                        "type": "object",
-                        "properties": {"text": {"type": "string"}},
-                        "required": ["text"],
-                    },
-                )
-                dom_after = _extract_text(extracted)
-                agent_response = dom_after
+            final_text = await self._extract_visible_text(session)
+            if final_text:
+                dom_after = final_text
         finally:
             await session.end()
 
+        agent_response = dom_after
         return BrowserArtifacts(
             technique_id=task.technique_id,
             session_id=str(session_id) if session_id else None,
             dom_before=dom_before,
             dom_after=dom_after,
-            storage_snapshot=StorageSnapshot(cookie_names=[], local_storage_keys=[]),
-            network_log=[NetworkEntry(url=fixture_url, status=200)],
             agent_response=agent_response,
         )
 
@@ -226,27 +197,16 @@ class VerificationRunner:
         self,
         session,
         task: ScenarioTask,
+        scenario: TechniqueScenario,
         fixture_url: str,
         step: BrowserStep,
-    ) -> str:
-        if step.action == "snapshot":
-            extracted = await session.extract(
-                instruction="extract visible page text",
-                schema={
-                    "type": "object",
-                    "properties": {"text": {"type": "string"}},
-                    "required": ["text"],
-                },
-            )
-            return truncate(_extract_text(extracted), 120)
+    ) -> tuple[str, str]:
         if step.action == "navigate":
             await session.navigate(url=fixture_url)
-            return f"Navigated to {fixture_url}"
+            return f"Navigated to {fixture_url}", ""
+
         if step.action == "fill" and step.selector:
-            value = task.parameters.get(
-                step.selector.strip("#"),
-                task.parameters.get("test_password", "riposte-test-only"),
-            )
+            value = _resolve_fill_value(step, task, scenario)
             await session.act(
                 input={
                     "description": f"Fill {step.selector}",
@@ -255,7 +215,8 @@ class VerificationRunner:
                     "arguments": [value],
                 }
             )
-            return f"Filled {step.selector}"
+            return f"Filled {step.selector}", ""
+
         if step.action == "click" and step.selector:
             await session.act(
                 input={
@@ -264,21 +225,83 @@ class VerificationRunner:
                     "method": "click",
                 }
             )
-            return f"Clicked {step.selector}"
-        if step.action == "extract":
-            extracted = await session.extract(
-                instruction=step.instruction or "extract page text",
-                schema={
-                    "type": "object",
-                    "properties": {"text": {"type": "string"}},
-                    "required": ["text"],
-                },
+            return f"Clicked {step.selector}", ""
+
+        if step.action in {"snapshot", "extract"}:
+            instruction = step.instruction or "extract all visible page text"
+            if step.selector:
+                instruction = (
+                    f"{instruction}. Focus on element {step.selector} if present."
+                )
+            extracted = await self._extract_with_instruction(session, instruction)
+            label = (
+                "Captured DOM snapshot"
+                if step.action == "snapshot"
+                else describe_browser_step(step)
             )
-            return truncate(_extract_text(extracted), 120)
+            return _truncate(extracted or label, _STEP_LOG_LIMIT), extracted
+
         if step.action == "wait":
             await asyncio.sleep(0.5)
-            return "Waited for page settle"
-        return describe_browser_step(step)
+            return "Waited for page settle", ""
+
+        return describe_browser_step(step), ""
+
+    async def _extract_visible_text(self, session) -> str:
+        return await self._extract_with_instruction(
+            session,
+            "Extract the full visible text of the page, including all div, pre, "
+            "and form field values currently shown to the user.",
+        )
+
+    async def _extract_with_instruction(self, session, instruction: str) -> str:
+        extracted = await session.extract(
+            instruction=instruction,
+            schema=_EXTRACT_SCHEMA,
+        )
+        return _extract_text(extracted)
+
+
+def _resolve_fill_value(
+    step: BrowserStep,
+    task: ScenarioTask,
+    scenario: TechniqueScenario,
+) -> str:
+    if step.value is not None:
+        return step.value
+
+    params = {**scenario.default_parameters, **task.parameters}
+    if not step.selector:
+        raise ValueError("Fill step requires a selector")
+
+    field_id = step.selector.lstrip("#")
+    param_key = _FILL_PARAM_ALIASES.get(field_id, field_id.replace("-", "_"))
+    for key in (param_key, field_id, field_id.replace("-", "_")):
+        if key in params and params[key]:
+            return params[key]
+
+    raise ValueError(
+        f"No fill value configured for {step.selector}. "
+        f"Set scenario default_parameters or task.parameters."
+    )
+
+
+def _error_result(task: ScenarioTask, payload: str, error: str) -> VerificationResult:
+    return VerificationResult(
+        audit_id=task.audit_id,
+        task_id=task.task_id,
+        technique_id=task.technique_id,
+        payload=payload,
+        response="",
+        repo_url=task.repo_url,
+        live=False,
+        verification_status="error",
+        control_failed=False,
+        artifacts=BrowserArtifacts(technique_id=task.technique_id),
+        error=error,
+        verification_mode=task.verification_mode,
+        baseline_run_id=task.baseline_run_id,
+    )
 
 
 async def _step_progress(
@@ -330,7 +353,7 @@ async def _emit(
     )
 
 
-def truncate(text: str, limit: int) -> str:
+def _truncate(text: str, limit: int) -> str:
     text = text.strip()
     if len(text) <= limit:
         return text
@@ -338,13 +361,34 @@ def truncate(text: str, limit: int) -> str:
 
 
 def _extract_text(extracted) -> str:
+    if extracted is None:
+        return ""
+    if isinstance(extracted, str):
+        return extracted.strip()
+
     data = getattr(extracted, "data", None)
-    if data is not None and getattr(data, "result", None) is not None:
-        result = data.result
-        if isinstance(result, dict):
-            return str(result.get("text") or result.get("reply") or "")
-        return str(result)
-    return str(extracted)
+    if data is not None:
+        result = getattr(data, "result", None)
+        if result is not None:
+            if isinstance(result, dict):
+                for key in ("text", "reply", "content", "value", "message"):
+                    val = result.get(key)
+                    if val:
+                        return str(val).strip()
+                parts = [str(v).strip() for v in result.values() if v]
+                if parts:
+                    return " ".join(parts).strip()
+            return str(result).strip()
+
+    for attr in ("text", "content", "result"):
+        val = getattr(extracted, attr, None)
+        if val:
+            return str(val).strip()
+
+    raw = str(extracted).strip()
+    if raw.startswith("<") and "object" in raw.lower():
+        return ""
+    return raw
 
 
 async def verification_worker(

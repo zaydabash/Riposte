@@ -48,9 +48,9 @@ def list_techniques() -> list[dict[str, str]]:
 
 
 def resolve_technique_ids(requested: list[str] | None) -> list[str]:
-    """Validate and return technique IDs, falling back to the default bundle."""
+    """Validate and return technique IDs, falling back to the full ATT&CK bundle."""
     if not requested:
-        return list(DEFAULT_TECHNIQUE_BUNDLE)
+        return list(FULL_TECHNIQUE_BUNDLE)
     unknown = [tid for tid in requested if tid not in _REGISTRY]
     if unknown:
         raise ValueError(f"Unknown technique_ids: {', '.join(unknown)}")

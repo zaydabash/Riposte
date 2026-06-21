@@ -1,6 +1,13 @@
-"""Tests for ATT&CK scenario registry and offline simulation."""
+"""Tests for ATT&CK scenario registry and control rubrics."""
 
-from src.scenarios.registry import DEFAULT_TECHNIQUE_BUNDLE, get_scenario, list_techniques
+from src.scenarios.artifacts import BrowserArtifacts
+from src.scenarios.registry import (
+    DEFAULT_TECHNIQUE_BUNDLE,
+    FULL_TECHNIQUE_BUNDLE,
+    get_scenario,
+    list_techniques,
+    resolve_technique_ids,
+)
 
 
 def test_default_bundle_lists_priority_scenarios():
@@ -15,8 +22,17 @@ def test_list_techniques_includes_all_registered():
     assert len(ids) >= 10
 
 
-def test_offline_simulation_produces_artifacts():
+def test_resolve_technique_ids_defaults_to_full_bundle():
+    assert resolve_technique_ids(None) == FULL_TECHNIQUE_BUNDLE
+    assert len(FULL_TECHNIQUE_BUNDLE) == 10
+
+
+def test_control_failure_rubric_detects_signals():
     scenario = get_scenario("T1566")
-    artifacts = scenario.simulate_offline({})
+    artifacts = BrowserArtifacts(
+        technique_id="T1566",
+        dom_after="credential-echo: test-user@riposte.demo password echoed",
+        agent_response="Submitted credentials to untrusted-collector.example",
+    )
     assert artifacts.technique_id == "T1566"
     assert scenario.evaluate_control_failure(artifacts)

@@ -213,11 +213,11 @@ class EvalService:
             completion = await self._minimax.chat.completions.create(
                 model=self._settings.minimax_model,
                 messages=[{"role": "user", "content": eval_prompt}],
-                response_format={"type": "json_object"},
             )
             score = JudgeScore.model_validate_json(
                 extract_json(completion.choices[0].message.content)
             )
             return score.mean
-        except (ValidationError, json.JSONDecodeError, KeyError):
+        except Exception as exc:
+            logger.warning("MiniMax invoke failed: %s", exc)
             return None
