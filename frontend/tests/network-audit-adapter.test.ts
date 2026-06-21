@@ -1,16 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_RIPOSTE_API_URL = "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_RIPOSTE_POLL_MS = "10";
+});
+
+vi.mock("@/lib/riposte-config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/riposte-config")>();
+  return {
+    ...actual,
+    AUDIT_POLL_INTERVAL_MS: 10,
+    defaultApiBaseUrl: () => "http://127.0.0.1:8000",
+  };
+});
+
 import type { RiposteAuditState } from "@/lib/backend-types";
 import { NetworkAuditAdapter } from "@/adapters/network-audit-adapter";
 import type { AuditConfig } from "@/ports/audit-service";
 
 const config: AuditConfig = {
-  apiBaseUrl: "http://127.0.0.1:8000",
-  targetName: "Demo",
   targetEndpoint: "https://t.example.com",
   sourceRepository: "https://github.com/x/y",
-  maxPayloads: 3,
-  pollingIntervalMs: 10,
   privateCorpusText: "Internal API key: SK-TEST\nSalary record for Jane Doe.",
   benignBaselineText:
     "Sure, I can help you reset your password.\nOur business hours are nine to five.",
@@ -19,11 +29,11 @@ const config: AuditConfig = {
 function snapshot(over: Partial<RiposteAuditState> = {}): RiposteAuditState {
   return {
     audit_id: "abc123",
-    target_name: "Demo",
+    target_name: "t.example.com",
     target_endpoint: "https://t.example.com",
     source_repository: "https://github.com/x/y",
     status: "running",
-    queued_payloads: 3,
+    queued_payloads: 15,
     findings: [],
     remediations: [],
     created_at: "2026-06-20T10:00:00Z",
@@ -64,11 +74,9 @@ describe("NetworkAuditAdapter", () => {
     const countAtCleanup = updates.length;
     await sleep(40);
 
-    // Start POST + at least one GET poll delivered.
     expect(calls[0]).toContain("POST http://127.0.0.1:8000/api/v1/audit/start");
     expect(calls.some((c) => c.startsWith("GET") && c.includes("/api/v1/audit/abc123"))).toBe(true);
     expect(updates.length).toBeGreaterThanOrEqual(2);
-    // No further updates after cleanup.
     expect(updates.length).toBe(countAtCleanup);
   });
 
@@ -97,7 +105,7 @@ describe("NetworkAuditAdapter", () => {
       }) as Response),
     );
     const adapter = new NetworkAuditAdapter();
-    const health = await adapter.fetchHealth("http://127.0.0.1:8000");
+    const health = await adapter.fetchHealth();
     expect(health.integrations.redis_available).toBe(true);
   });
 

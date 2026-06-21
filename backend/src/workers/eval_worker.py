@@ -7,6 +7,7 @@ import logging
 from collections.abc import Callable
 from typing import Awaitable
 
+from src.config import Settings
 from src.core.models import (
     AriesComponents,
     AttackResult,
@@ -30,7 +31,9 @@ async def eval_worker(
     scoring_lookup: ScoringLookup,
     on_finding: Callable[[Finding], Awaitable[None]],
     shutdown_event: asyncio.Event,
+    settings: Settings | None = None,
 ) -> None:
+    timeout = (settings.worker_task_timeout if settings else 300.0)
     while not shutdown_event.is_set():
         try:
             result: EvalInput | None = await asyncio.wait_for(eval_queue.get(), timeout=1.0)
@@ -44,9 +47,9 @@ async def eval_worker(
         try:
             eval_service, verification_service = scoring_lookup(result.audit_id)
             if isinstance(result, VerificationResult) and verification_service is not None:
-                finding = await verification_service.evaluate(result)
+                finding = await asyncio.wait_for(verification_service.evaluate(result), timeout=timeout)
             elif isinstance(result, AttackResult):
-                finding = await eval_service.evaluate(result)
+                finding = await asyncio.wait_for(eval_service.evaluate(result), timeout=timeout)
             else:
                 raise TypeError(f"Unexpected eval input: {type(result)}")
 

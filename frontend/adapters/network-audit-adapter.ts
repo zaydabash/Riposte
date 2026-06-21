@@ -15,6 +15,10 @@ import type {
   RiposteAuditState,
 } from "@/lib/backend-types";
 import { corpusLinesToList } from "@/lib/corpus-text";
+import {
+  AUDIT_POLL_INTERVAL_MS,
+  defaultApiBaseUrl,
+} from "@/lib/riposte-config";
 import type {
   AuditConfig,
   AuditService,
@@ -31,12 +35,21 @@ function jsonHeaders(
   return { "Content-Type": "application/json", ...(authHeaders ?? {}) };
 }
 
+function deriveTargetName(endpoint: string): string {
+  try {
+    return new URL(endpoint).hostname || "audit-target";
+  } catch {
+    return "audit-target";
+  }
+}
+
 export class NetworkAuditAdapter implements AuditService {
   startAudit(
     config: AuditConfig,
     onUpdate: (state: RiposteAuditState) => void,
     onError: (err: Error) => void,
   ): AuditSubscription {
+    const apiBaseUrl = defaultApiBaseUrl();
     const controller = new AbortController();
     let intervalId: ReturnType<typeof setInterval> | null = null;
     let stopped = false;
@@ -54,7 +67,7 @@ export class NetworkAuditAdapter implements AuditService {
       if (stopped) return;
       try {
         const res = await fetch(
-          joinUrl(config.apiBaseUrl, `/api/v1/audit/${encodeURIComponent(auditId)}`),
+          joinUrl(apiBaseUrl, `/api/v1/audit/${encodeURIComponent(auditId)}`),
           { method: "GET", headers: jsonHeaders(config.authHeaders), signal: controller.signal },
         );
         if (!res.ok) {
@@ -75,15 +88,14 @@ export class NetworkAuditAdapter implements AuditService {
     void (async () => {
       try {
         const body: AuditRequestBody = {
-          target_name: config.targetName,
           target_endpoint: config.targetEndpoint,
           source_repository: config.sourceRepository,
           interface_type: "web-ui",
-          max_payloads: config.maxPayloads,
           private_corpus: [...corpusLinesToList(config.privateCorpusText)],
           benign_baseline: [...corpusLinesToList(config.benignBaselineText)],
+          target_name: deriveTargetName(config.targetEndpoint),
         };
-        const res = await fetch(joinUrl(config.apiBaseUrl, "/api/v1/audit/start"), {
+        const res = await fetch(joinUrl(apiBaseUrl, "/api/v1/audit/start"), {
           method: "POST",
           headers: jsonHeaders(config.authHeaders),
           body: JSON.stringify(body),
@@ -97,7 +109,7 @@ export class NetworkAuditAdapter implements AuditService {
         onUpdate(initial);
 
         const auditId = initial.audit_id;
-        intervalId = setInterval(() => void poll(auditId), config.pollingIntervalMs);
+        intervalId = setInterval(() => void poll(auditId), AUDIT_POLL_INTERVAL_MS);
       } catch (err) {
         if (!isAbort(err) && !stopped) onError(toError(err));
       }
@@ -107,10 +119,9 @@ export class NetworkAuditAdapter implements AuditService {
   }
 
   async fetchHealth(
-    apiBaseUrl: string,
     authHeaders?: Readonly<Record<string, string>>,
   ): Promise<HealthResponse> {
-    const res = await fetch(joinUrl(apiBaseUrl, "/health"), {
+    const res = await fetch(joinUrl(defaultApiBaseUrl(), "/health"), {
       method: "GET",
       headers: jsonHeaders(authHeaders),
     });

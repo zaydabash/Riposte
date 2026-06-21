@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Globe,
   MousePointerClick,
   MonitorPlay,
@@ -162,7 +160,7 @@ export function VerificationConsole({
   const session = sessions[Math.min(selectedIndex, sessions.length - 1)];
 
   return (
-    <div className="flex h-full min-h-[220px] flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain">
       <SessionActivityGrid
         sessions={sessions}
         selectedIndex={selectedIndex}
@@ -202,7 +200,7 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
   if (sessions.length === 0) return null;
 
   return (
-    <div className="border border-white/10 bg-black/20 p-2">
+    <div className="shrink-0 border border-white/10 bg-black/20 p-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
           Target fuzz probes
@@ -221,7 +219,7 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
             <div
               key={session.task_id}
               className={cn(
-                "min-w-0 border bg-black/40 p-2",
+                "min-w-0 border bg-black/40 p-2 flex flex-col gap-1",
                 session.status === "error"
                   ? "border-[var(--status-vulnerable)]/50"
                   : active
@@ -229,13 +227,13 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
                     : "border-white/10",
               )}
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-foreground/90">
+              <div className="flex items-center justify-between gap-1 w-full">
+                <span className="font-mono text-[10px] text-foreground/90 truncate">
                   FZ-{index + 1}
                 </span>
                 <span
                   className={cn(
-                    "h-1.5 w-1.5 rounded-full",
+                    "h-1.5 w-1.5 shrink-0 rounded-full",
                     active && "bg-accent animate-pulse-orange",
                     session.status === "completed" && "bg-[var(--status-safe)]",
                     session.status === "queued" && "bg-white/20",
@@ -243,15 +241,15 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
                   )}
                 />
               </div>
-              <p className="mt-1 truncate font-mono text-[9px] text-muted">
+              <p className="mt-1 truncate w-full font-mono text-[9px] text-muted">
                 {FUZZ_LABEL[session.status]}
               </p>
               {session.final_loss != null && session.initial_loss != null && (
-                <p className="mt-0.5 font-mono text-[9px] text-muted/80">
+                <p className="mt-0.5 w-full truncate font-mono text-[9px] text-muted/80">
                   loss {session.initial_loss.toFixed(2)} → {session.final_loss.toFixed(2)}
                 </p>
               )}
-              <p className="mt-0.5 truncate font-mono text-[9px] text-muted/60">
+              <p className="mt-0.5 truncate w-full font-mono text-[9px] text-muted/60">
                 {session.generated_payload ?? session.seed}
               </p>
             </div>
@@ -272,7 +270,7 @@ function SessionActivityGrid({
   onSelect: (index: number) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-6">
+    <div className="shrink-0 grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-6">
       {sessions.map((session, index) => {
         const { completed, total, ratio } = sessionStepProgress(session);
         const control = controlLabel(session);
@@ -287,13 +285,13 @@ function SessionActivityGrid({
               index === selectedIndex && "ring-1 ring-accent/40",
             )}
           >
-            <div className="flex items-center justify-between gap-1">
-              <span className="font-mono text-[10px] text-foreground/90">
+            <div className="flex items-center justify-between gap-1 w-full">
+              <span className="font-mono text-[10px] text-foreground/90 truncate">
                 {session.technique_id}
               </span>
               <span
                 className={cn(
-                  "h-1.5 w-1.5 rounded-full",
+                  "h-1.5 w-1.5 shrink-0 rounded-full",
                   session.status === "running" && "bg-accent animate-pulse-orange",
                   session.status === "evaluating" && "bg-[var(--accent-orange)] animate-pulse-orange",
                   session.status === "queued" && "bg-white/20",
@@ -302,7 +300,7 @@ function SessionActivityGrid({
                 )}
               />
             </div>
-            <div className="h-1 w-full bg-white/10">
+            <div className="h-1 w-full bg-white/10 shrink-0">
               <div
                 className={cn(
                   "h-full transition-all duration-300",
@@ -315,14 +313,14 @@ function SessionActivityGrid({
                 style={{ width: `${Math.max(ratio * 100, session.status === "running" ? 8 : 0)}%` }}
               />
             </div>
-            <p className="font-mono text-[9px] text-muted">
+            <p className="font-mono text-[9px] text-muted truncate w-full">
               {PROGRESS_LABEL[session.status]}
               {total > 0 ? ` · ${completed}/${total}` : ""}
             </p>
             {control && (
               <p
                 className={cn(
-                  "font-mono text-[9px]",
+                  "font-mono text-[9px] truncate w-full",
                   session.verification_status === "pass"
                     ? "text-[var(--status-safe)]"
                     : session.verification_status === "fail"
@@ -397,7 +395,7 @@ function SessionConsole({
   const { completed, total } = sessionStepProgress(session);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col border border-white/10 bg-black/40 lg:flex-row">
+    <div className="flex min-h-[300px] flex-1 flex-col overflow-hidden border border-white/10 bg-black/40 lg:flex-row lg:min-h-[300px]">
       <BrowserViewport
         session={session}
         activeStep={activeStep}
@@ -407,8 +405,8 @@ function SessionConsole({
         compact={compact}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-white/10 lg:border-t-0 lg:border-l">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 px-3 py-2">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-t border-white/10 lg:border-t-0 lg:border-l">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/10 px-3 py-2">
           <div className="min-w-0">
             <p className="font-mono text-xs text-foreground/90">
               {session.technique_id} · {session.technique_name}
@@ -445,7 +443,12 @@ function SessionConsole({
           </div>
         </div>
 
-        <div className={cn("min-h-0 flex-1 overflow-auto px-3 py-2", compact ? "text-[10px]" : "text-xs")}>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2",
+            compact ? "text-[10px]" : "text-xs",
+          )}
+        >
           <p className="mb-2 font-mono text-[10px] tracking-widest text-muted uppercase">
             Step log
           </p>
@@ -481,53 +484,6 @@ function SessionConsole({
             })}
           </ol>
         </div>
-
-        {(session.agent_response || session.dom_after || session.error) && (
-          <SessionOutputFooter session={session} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SessionOutputFooter({ session }: { session: VerificationSession }) {
-  const [expanded, setExpanded] = useState(false);
-  const outputText = session.error ?? session.agent_response ?? session.dom_after ?? "";
-  const isLong = outputText.length > 240;
-  const preview = isLong && !expanded ? `${outputText.slice(0, 240)}…` : outputText;
-
-  return (
-    <div className="border-t border-white/10 px-3 py-2 font-mono text-[10px]">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="tracking-widest text-muted uppercase">
-          {session.error ? "Error output" : "Full output"}
-        </p>
-        {isLong && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="inline-flex items-center gap-1 text-muted transition-colors hover:text-foreground"
-          >
-            {expanded ? (
-              <>
-                Collapse <ChevronUp size={12} />
-              </>
-            ) : (
-              <>
-                Expand <ChevronDown size={12} />
-              </>
-            )}
-          </button>
-        )}
-      </div>
-      <div
-        className={cn(
-          "whitespace-pre-wrap break-words",
-          session.error ? "text-[var(--status-vulnerable)]" : "text-foreground/80",
-          expanded && isLong && "max-h-64 overflow-auto",
-        )}
-      >
-        {preview}
       </div>
     </div>
   );
@@ -554,7 +510,7 @@ function BrowserViewport({
     <div
       className={cn(
         "flex shrink-0 flex-col bg-[#0a0a0c]",
-        compact ? "w-full lg:w-[38%]" : "w-full lg:w-[42%]",
+        compact ? "w-full lg:w-[38%] lg:min-h-0" : "w-full lg:w-[42%]",
       )}
     >
       <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
@@ -568,12 +524,12 @@ function BrowserViewport({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
+      <div className="flex min-h-[180px] flex-1 flex-col items-center justify-center gap-3 p-4 text-center lg:min-h-[240px]">
         {session.session_id ? (
           <iframe
             title="Browserbase Live View"
             src={`https://www.browserbase.com/sessions/${session.session_id}/debug`}
-            className="h-full w-full rounded border border-white/10 bg-black/50"
+            className="min-h-[160px] w-full flex-1 rounded border border-white/10 bg-black/50 lg:min-h-0"
             allow="clipboard-read; clipboard-write"
             sandbox="allow-same-origin allow-scripts allow-forms"
           />

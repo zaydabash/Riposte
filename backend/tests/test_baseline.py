@@ -12,3 +12,13 @@ def test_baseline_percentile_is_bounded():
     model = BaselineModel.fit(matrix)
     score = model.percentile(matrix[0])
     assert 0.0 <= score <= 100.0
+
+
+def test_baseline_fits_two_sample_corpus():
+    """Two-line benign baselines are valid API input; LOO PCA is skipped."""
+    p = EmbeddingProvider(Settings(EMBEDDING_DIM=256, MINIMAX_API_KEY=None))
+    matrix = np.array([p.embed(t) for t in SAMPLE_BENIGN_BASELINE[:2]])
+    model = BaselineModel.fit(matrix)
+    score = model.percentile(matrix[0])
+    assert 0.0 <= score <= 100.0
+    assert model.empirical_scores.shape == (2,)

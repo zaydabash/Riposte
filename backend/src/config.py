@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # --- Anthropic (auto-remediation) ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
-    claude_model_id: str = Field(default="claude-opus-4-8", alias="CLAUDE_MODEL_ID")
+    claude_model_id: str = Field(default="claude-3-opus-20240229", alias="CLAUDE_MODEL_ID")
 
     # --- MiniMax (fuzzer + ensemble judge) ---
     minimax_api_key: str | None = Field(default=None, alias="MINIMAX_API_KEY")
@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     offensive_workers: int = Field(default=3, alias="OFFENSIVE_WORKERS")
     eval_workers: int = Field(default=2, alias="EVAL_WORKERS")
     remediation_workers: int = Field(default=1, alias="REMEDIATION_WORKERS")
+    default_max_techniques: int = Field(default=10, alias="DEFAULT_MAX_TECHNIQUES")
+    default_max_fuzz_seeds: int = Field(default=5, alias="DEFAULT_MAX_FUZZ_SEEDS")
 
     # --- Adversarial fuzzer (token-level loss optimization) ---
     fuzzer_steps: int = Field(default=16, alias="FUZZER_STEPS")
@@ -113,6 +115,7 @@ class Settings(BaseSettings):
     minimax_http_timeout: float = Field(default=20.0, alias="MINIMAX_HTTP_TIMEOUT")
     redis_socket_timeout: float = Field(default=3.0, alias="REDIS_SOCKET_TIMEOUT")
     github_http_timeout: float = Field(default=30.0, alias="GITHUB_HTTP_TIMEOUT")
+    worker_task_timeout: float = Field(default=300.0, alias="WORKER_TASK_TIMEOUT")
     github_default_branch: str = Field(default="main", alias="GITHUB_DEFAULT_BRANCH")
     sentry_traces_sample_rate: float = Field(
         default=1.0, alias="SENTRY_TRACES_SAMPLE_RATE"

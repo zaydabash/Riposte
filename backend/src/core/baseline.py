@@ -27,9 +27,29 @@ from scipy import stats
 
 def _fit_params(x: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return (mean, components[k,dim], cov_inv[k,k]) for a centered PCA fit."""
+    x = np.asarray(x, dtype=np.float64)
     mean = x.mean(axis=0)
     centered = x - mean
-    _, _, vt = np.linalg.svd(centered, full_matrices=False)
+    dim = x.shape[1]
+    k = max(1, min(k, dim, max(1, x.shape[0] - 1)))
+
+    def _identity_fallback() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        components = np.eye(dim, dtype=np.float64)[:k]
+        return mean, components, np.eye(k, dtype=np.float64)
+
+    if x.shape[0] < 2 or np.allclose(centered, 0.0):
+        return _identity_fallback()
+
+    try:
+        _, singular, vt = np.linalg.svd(centered, full_matrices=False)
+    except np.linalg.LinAlgError:
+        return _identity_fallback()
+
+    rank = int(np.sum(singular > 1e-9))
+    if rank == 0:
+        return _identity_fallback()
+
+    k = min(k, rank)
     components = vt[:k]
     projected = centered @ components.T
     cov = np.atleast_2d(np.cov(projected, rowvar=False)) + np.eye(k) * 1e-6
@@ -76,14 +96,19 @@ class BaselineModel:
         mean_spe = float(np.mean(spes))
         beta = (mean_t2 / mean_spe) if mean_spe > 1e-9 else 1.0
 
-        # Leave-one-out empirical distribution: each benign sample is scored against
-        # a subspace fit on the *others*, giving realistic nonzero residuals.
+        # Leave-one-out needs at least three benign samples; with fewer, score each
+        # sample against the global fit so small corpora still start audits.
         empirical: list[float] = []
-        for i in range(n_samples):
-            others = np.delete(x, i, axis=0)
-            m_i, c_i, ci_i = _fit_params(others, k)
-            t2, spe = _t2_spe(x[i], m_i, c_i, ci_i)
-            empirical.append(t2 + beta * spe)
+        if n_samples < 3:
+            for row in x:
+                t2, spe = _t2_spe(row, mean, components, cov_inv)
+                empirical.append(t2 + beta * spe)
+        else:
+            for i in range(n_samples):
+                others = np.delete(x, i, axis=0)
+                m_i, c_i, ci_i = _fit_params(others, k)
+                t2, spe = _t2_spe(x[i], m_i, c_i, ci_i)
+                empirical.append(t2 + beta * spe)
 
         return cls(
             pca_mean=mean,

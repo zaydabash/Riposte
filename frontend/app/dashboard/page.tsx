@@ -6,21 +6,12 @@ import { PixelBackground } from "@/components/backgrounds/PixelBackground";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { useAudit } from "@/hooks/use-audit";
 import type { AuditConfig } from "@/ports/audit-service";
-import {
-  DEFAULT_MAX_PAYLOADS,
-  DEFAULT_POLLING_INTERVAL_MS,
-  defaultApiBaseUrl,
-} from "@/lib/riposte-config";
 
-/** Initial *form* values (user input state). The hook still validates on Start. */
+/** Initial form values (user input state). The hook validates on Start. */
 function initialConfig(): AuditConfig {
   return {
-    apiBaseUrl: defaultApiBaseUrl(),
-    targetName: "",
     targetEndpoint: "",
     sourceRepository: "",
-    maxPayloads: DEFAULT_MAX_PAYLOADS,
-    pollingIntervalMs: DEFAULT_POLLING_INTERVAL_MS,
     privateCorpusText: "",
     benignBaselineText: "",
   };
@@ -41,19 +32,18 @@ export default function DashboardPage() {
     refreshHealth,
   } = useAudit();
 
-  // Probe integration health when the API URL is known/changes.
   useEffect(() => {
-    if (config.apiBaseUrl.trim()) refreshHealth(config.apiBaseUrl);
-  }, [config.apiBaseUrl, refreshHealth]);
+    refreshHealth();
+  }, [refreshHealth]);
 
   const handleStart = () => {
-    refreshHealth(config.apiBaseUrl);
+    refreshHealth();
     initializeAudit(config);
   };
 
   const handleReset = () => {
     reset();
-    setConfig((c) => ({ ...initialConfig(), apiBaseUrl: c.apiBaseUrl }));
+    setConfig(initialConfig());
   };
 
   return (

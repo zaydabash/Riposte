@@ -49,7 +49,7 @@ async def test_remediation_runner_opens_pr_for_target_route():
             return "https://github.com/example/app/pull/1"
 
     class FakeEngine:
-        async def generate_fix(self, error_log, code_snippet, file_path):
+        async def generate_fix(self, error_log, code_snippet, file_path, target_url=None):
             assert file_path == "src/app/admin/page.tsx"
             assert "T1566" in error_log
             return "export default function Page() { return null }"

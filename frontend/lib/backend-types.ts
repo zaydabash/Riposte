@@ -103,11 +103,12 @@ export interface RiposteAuditState {
 
 /** POST body for `/api/v1/audit/start` (snake_case, matches backend `AuditRequest`). */
 export interface AuditRequestBody {
-  readonly target_name: string;
+  readonly target_name?: string;
   readonly target_endpoint: string;
   readonly source_repository: string;
   readonly interface_type: InterfaceType;
-  readonly max_payloads: number;
+  readonly max_techniques?: number;
+  readonly max_fuzz_seeds?: number;
   readonly technique_ids?: readonly string[];
   readonly verification_mode?: "continuous" | "repair_validation";
   readonly baseline_run_id?: string | null;

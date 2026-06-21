@@ -13,11 +13,6 @@ import type { AuditConfig } from "@/ports/audit-service";
 import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import {
-  defaultApiBaseUrl,
-  MAX_PAYLOADS_LIMIT,
-  MIN_POLLING_INTERVAL_MS,
-} from "@/lib/riposte-config";
 import type { AuditPhase } from "@/hooks/use-audit";
 
 interface ControlPlaneSharedProps {
@@ -186,7 +181,7 @@ export function AuditConfigForm({
             New Audit
           </h2>
           <p className="mt-0.5 font-mono text-[10px] text-muted">
-            All fields required. API URL, payload budget, and poll interval pre-fill from env.
+            Endpoint, repository, and corpora required. Runs 10 ATT&CK scenarios and 5 fuzz seeds.
           </p>
         </div>
         <div className="flex gap-2">
@@ -204,25 +199,15 @@ export function AuditConfigForm({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className={cn("grid lg:grid-cols-3", compact ? "gap-2.5" : "gap-4")}>
-          <div className="lg:col-span-3">
-            <label htmlFor="api-url" className={labelClass}>
-              API URL
-            </label>
-            <input
-              id="api-url"
-              type="url"
-              value={config.apiBaseUrl}
-              onChange={(e) => update("apiBaseUrl", e.target.value)}
-              disabled={isActive}
-              className={inputClass}
-              placeholder={defaultApiBaseUrl()}
-            />
-          </div>
-          <div className="lg:col-span-3">
+        <div className={cn("grid lg:grid-cols-2", compact ? "gap-2.5" : "gap-4")}>
+          <div className="lg:col-span-2">
             <label htmlFor="private-corpus" className={labelClass}>
               Private Corpus
             </label>
+            <p className="mb-1.5 font-mono text-[10px] leading-snug text-muted">
+              One line per canary document. Use synthetic test strings (fake keys/PII), not
+              production secrets. Riposte checks whether the target echoes this exact text.
+            </p>
             <textarea
               id="private-corpus"
               rows={compact ? 3 : 4}
@@ -230,13 +215,17 @@ export function AuditConfigForm({
               onChange={(e) => update("privateCorpusText", e.target.value)}
               disabled={isActive}
               className={cn(inputClass, "resize-y")}
-              placeholder="One proprietary document per line (data the target must not leak)"
+              placeholder={"Internal API key: SK-AUDIT-canary-7f3a\nEmployee Jane Doe salary is $142000"}
             />
           </div>
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2">
             <label htmlFor="benign-baseline" className={labelClass}>
               Benign Baseline
             </label>
+            <p className="mb-1.5 font-mono text-[10px] leading-snug text-muted">
+              One line per normal on-topic reply (at least two). Defines what safe behavior
+              looks like for this agent.
+            </p>
             <textarea
               id="benign-baseline"
               rows={compact ? 3 : 4}
@@ -244,24 +233,10 @@ export function AuditConfigForm({
               onChange={(e) => update("benignBaselineText", e.target.value)}
               disabled={isActive}
               className={cn(inputClass, "resize-y")}
-              placeholder="One normal on-topic response per line (at least two lines)"
+              placeholder={"Sure, I can help you reset your password.\nOur business hours are Monday through Friday."}
             />
           </div>
-          <div>
-            <label htmlFor="target-name" className={labelClass}>
-              Target Name
-            </label>
-            <input
-              id="target-name"
-              type="text"
-              value={config.targetName}
-              onChange={(e) => update("targetName", e.target.value)}
-              disabled={isActive}
-              className={inputClass}
-              placeholder="Demo Support Bot"
-            />
-          </div>
-          <div>
+          <div className="lg:col-span-2">
             <label htmlFor="target-endpoint" className={labelClass}>
               Target Endpoint
             </label>
@@ -275,7 +250,7 @@ export function AuditConfigForm({
               placeholder="https://target-agent.com"
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <label htmlFor="source-repo" className={labelClass}>
               Source Repository
             </label>
@@ -287,38 +262,6 @@ export function AuditConfigForm({
               disabled={isActive}
               className={inputClass}
               placeholder="https://github.com/target/bot"
-            />
-          </div>
-          <div>
-            <label htmlFor="max-payloads" className={labelClass}>
-              Payload Budget
-            </label>
-            <input
-              id="max-payloads"
-              type="number"
-              min={1}
-              max={MAX_PAYLOADS_LIMIT}
-              value={config.maxPayloads}
-              onChange={(e) => update("maxPayloads", Number(e.target.value))}
-              disabled={isActive}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="poll-interval" className={labelClass}>
-              Poll (ms)
-            </label>
-            <input
-              id="poll-interval"
-              type="number"
-              min={MIN_POLLING_INTERVAL_MS}
-              step={MIN_POLLING_INTERVAL_MS}
-              value={config.pollingIntervalMs}
-              onChange={(e) =>
-                update("pollingIntervalMs", Number(e.target.value))
-              }
-              disabled={isActive}
-              className={inputClass}
             />
           </div>
         </div>

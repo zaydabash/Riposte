@@ -14,15 +14,10 @@ export function defaultApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_RIPOSTE_API_URL ?? "http://127.0.0.1:8000";
 }
 
-/** Mirrors backend `AuditRequest.max_payloads` upper bound (`le=50`). */
-export const MAX_PAYLOADS_LIMIT = readPositiveInt(
-  process.env.NEXT_PUBLIC_RIPOSTE_MAX_PAYLOADS_LIMIT,
+/** Mirrors backend `AuditRequest.max_techniques` upper bound (`le=50`). */
+export const MAX_TECHNIQUES_LIMIT = readPositiveInt(
+  process.env.NEXT_PUBLIC_RIPOSTE_MAX_TECHNIQUES_LIMIT,
   50,
-);
-
-export const DEFAULT_MAX_PAYLOADS = readPositiveInt(
-  process.env.NEXT_PUBLIC_RIPOSTE_MAX_PAYLOADS,
-  10,
 );
 
 export const DEFAULT_POLLING_INTERVAL_MS = readPositiveInt(
@@ -30,10 +25,8 @@ export const DEFAULT_POLLING_INTERVAL_MS = readPositiveInt(
   1000,
 );
 
-export const MIN_POLLING_INTERVAL_MS = readPositiveInt(
-  process.env.NEXT_PUBLIC_RIPOSTE_POLL_MIN_MS,
-  250,
-);
+/** Fixed audit poll interval for the network adapter. */
+export const AUDIT_POLL_INTERVAL_MS = DEFAULT_POLLING_INTERVAL_MS;
 
 /** Mirrors backend `ARIES_CRITICAL_THRESHOLD`. */
 export const CRITICAL_ARIES_THRESHOLD = readPositiveInt(

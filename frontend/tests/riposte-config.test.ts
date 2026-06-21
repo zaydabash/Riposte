@@ -3,20 +3,20 @@ import { describe, expect, it } from "vitest";
 import {
   ARIES_BAND_MEDIUM_THRESHOLD,
   ARIES_WEIGHTS,
+  AUDIT_POLL_INTERVAL_MS,
   CRITICAL_ARIES_THRESHOLD,
-  DEFAULT_MAX_PAYLOADS,
   DEFAULT_POLLING_INTERVAL_MS,
   LEAKAGE_ALERT_THRESHOLD,
   LEAKAGE_BLEND_WEIGHTS,
-  MAX_PAYLOADS_LIMIT,
+  MAX_TECHNIQUES_LIMIT,
   defaultApiBaseUrl,
 } from "@/lib/riposte-config";
 
 describe("riposte-config", () => {
   it("exposes positive numeric defaults", () => {
-    expect(DEFAULT_MAX_PAYLOADS).toBeGreaterThan(0);
     expect(DEFAULT_POLLING_INTERVAL_MS).toBeGreaterThan(0);
-    expect(MAX_PAYLOADS_LIMIT).toBeGreaterThan(0);
+    expect(AUDIT_POLL_INTERVAL_MS).toBe(DEFAULT_POLLING_INTERVAL_MS);
+    expect(MAX_TECHNIQUES_LIMIT).toBeGreaterThan(0);
     expect(CRITICAL_ARIES_THRESHOLD).toBeGreaterThan(0);
     expect(ARIES_BAND_MEDIUM_THRESHOLD).toBeGreaterThan(0);
     expect(LEAKAGE_ALERT_THRESHOLD).toBeGreaterThan(0);

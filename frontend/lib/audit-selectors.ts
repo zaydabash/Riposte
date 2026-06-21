@@ -285,6 +285,7 @@ export function deriveAlerts(
     });
   }
   for (const r of diffRemediations(prev, next)) {
+    if (r.status === "failed" || r.status === "error") continue;
     push({
       id: `${auditId}|${remediationKey(r)}|new_remediation`,
       type: "new_remediation",

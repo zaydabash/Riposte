@@ -8,10 +8,10 @@ from tests.sample_corpora import SAMPLE_BENIGN_BASELINE, SAMPLE_PRIVATE_CORPUS
 
 def _audit_body(**overrides) -> dict:
     body = {
-        "target_name": "Demo Bot",
         "target_endpoint": "https://target.example.com",
         "source_repository": "https://github.com/target/bot",
-        "max_payloads": 3,
+        "max_techniques": 3,
+        "max_fuzz_seeds": 3,
         "private_corpus": SAMPLE_PRIVATE_CORPUS[:3],
         "benign_baseline": SAMPLE_BENIGN_BASELINE[:3],
     }

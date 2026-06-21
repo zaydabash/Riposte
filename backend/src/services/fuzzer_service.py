@@ -101,6 +101,7 @@ class AdversarialFuzzer:
         self._embeddings = embeddings
         self._objective_emb = embeddings.embed(_OBJECTIVE_PROTOTYPE)
         self._refusal_emb = embeddings.embed(_REFUSAL_PROTOTYPE)
+        self._spacy_lexemes: tuple[str, ...] | None = None
 
     # --- public API ----------------------------------------------------------
     async def generate(
@@ -185,6 +186,11 @@ class AdversarialFuzzer:
         when the target exposes ``top_logprobs``.
         """
         text = response.text or ""
+        if not text.strip():
+            # Empty response means no data to judge — treat as worst-case loss
+            # to avoid rewarding dead targets with a false "victory".
+            return self._settings.fuzzer_refusal_penalty + 5.0
+
         resp_emb = self._embeddings.embed(text)
 
         sim_obj = self._cosine(resp_emb, self._objective_emb)
@@ -219,20 +225,23 @@ class AdversarialFuzzer:
         for seed in seeds:
             tokens.update(w.lower() for w in _WORD_RE.findall(seed))
 
-        try:  # lazy: enrich with frequent, vector-backed lexemes when available
-            from src.core.embeddings import _spacy_model
+        if self._spacy_lexemes is None:
+            try:
+                from src.core.embeddings import _spacy_model
+                nlp = _spacy_model()
+                if nlp is not None:
+                    lexemes = sorted(
+                        (lex for lex in nlp.vocab if lex.is_alpha and lex.has_vector),
+                        key=lambda lex: (-lex.prob, lex.text),
+                    )
+                    self._spacy_lexemes = tuple(
+                        lex.text.lower() for lex in lexemes[:400]
+                    )
+            except Exception:
+                self._spacy_lexemes = ()
 
-            nlp = _spacy_model()
-            if nlp is not None:
-                lexemes = sorted(
-                    (lex for lex in nlp.vocab if lex.is_alpha and lex.has_vector),
-                    key=lambda lex: lex.prob,
-                    reverse=True,
-                )
-                for lex in lexemes[:400]:
-                    tokens.add(lex.text.lower())
-        except Exception:  # pragma: no cover - optional dependency
-            pass
+        if self._spacy_lexemes:
+            tokens.update(self._spacy_lexemes)
 
         tokens.update(_FALLBACK_ALPHABET)
         return sorted(t for t in tokens if len(t) >= 2)

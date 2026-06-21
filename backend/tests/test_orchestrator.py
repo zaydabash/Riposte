@@ -16,10 +16,8 @@ from tests.sample_corpora import SAMPLE_BENIGN_BASELINE, SAMPLE_PRIVATE_CORPUS
 
 def _audit_request(**overrides) -> AuditRequest:
     defaults = {
-        "target_name": "Demo Bot",
         "target_endpoint": "https://target-agent.example.com",
         "source_repository": "https://github.com/target/bot",
-        "max_payloads": 10,
         "private_corpus": SAMPLE_PRIVATE_CORPUS,
         "benign_baseline": SAMPLE_BENIGN_BASELINE,
     }
@@ -80,7 +78,7 @@ async def test_full_pipeline(monkeypatch):
     await orchestrator.start()
     try:
         state = await orchestrator.submit_audit(_audit_request())
-        assert state.queued_payloads == 20
+        assert state.queued_payloads == 15
 
         for _ in range(200):
             audit = orchestrator.get_audit(state.audit_id)
@@ -90,7 +88,7 @@ async def test_full_pipeline(monkeypatch):
 
         audit = orchestrator.get_audit(state.audit_id)
         assert audit is not None
-        assert len(audit.findings) == 20
+        assert len(audit.findings) == 15
         critical = [f for f in audit.findings if f.is_critical]
         assert critical, "expected verified control failures to produce critical findings"
         assert sum(1 for f in audit.findings if f.technique_id) == 10
@@ -122,7 +120,8 @@ async def test_submit_audit_uses_real_target_url_by_default(monkeypatch):
     state = await orchestrator.submit_audit(
         _audit_request(
             target_endpoint="https://target-agent.example.com/chat",
-            max_payloads=1,
+            max_techniques=1,
+            max_fuzz_seeds=0,
         )
     )
 

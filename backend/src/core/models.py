@@ -11,8 +11,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
+from src.core.audit_defaults import derive_target_name
 from src.scenarios.artifacts import BrowserArtifacts
 
 
@@ -110,11 +111,16 @@ class FuzzSession(BaseModel):
 class AuditRequest(BaseModel):
     """Incoming audit configuration (API boundary)."""
 
-    target_name: str = Field(..., min_length=1, max_length=200)
+    target_name: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Display label; derived from target_endpoint hostname when omitted.",
+    )
     target_endpoint: HttpUrl
     source_repository: HttpUrl
     interface_type: InterfaceType = InterfaceType.WEB_UI
-    max_payloads: int = Field(default=10, ge=1, le=50)
+    max_techniques: int = Field(default=10, ge=1, le=50)
+    max_fuzz_seeds: int = Field(default=5, ge=0, le=50)
     technique_ids: list[str] = Field(default_factory=list)
     verification_mode: VerificationMode = VerificationMode.CONTINUOUS
     baseline_run_id: str | None = None
@@ -135,6 +141,16 @@ class AuditRequest(BaseModel):
         max_length=50,
         description="Optional adversarial seed prompts; derived from private_corpus when empty.",
     )
+
+    @model_validator(mode="after")
+    def _normalize_target_name(self) -> "AuditRequest":
+        if not self.target_name or not self.target_name.strip():
+            object.__setattr__(
+                self,
+                "target_name",
+                derive_target_name(str(self.target_endpoint), None),
+            )
+        return self
 
 
 class ScenarioTask(BaseModel):

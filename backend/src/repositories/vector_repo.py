@@ -115,7 +115,14 @@ class VectorRepository:
         if self._client is None:
             return False
         try:
-            await self._client.execute_command("FT.INFO", index_name)
+            info = await self._client.execute_command("FT.INFO", index_name)
+            stored_dim = self._parse_index_dim(info)
+            if stored_dim is not None and stored_dim != dim:
+                logger.warning(
+                    "Index %s has DIM=%d but current EMBEDDING_DIM=%d. "
+                    "Vector search results may be incorrect.",
+                    index_name, stored_dim, dim,
+                )
             if track == "evidence":
                 self._evidence_index_available = True
             else:
@@ -327,6 +334,31 @@ class VectorRepository:
     @staticmethod
     def _parse_payload_results(results: list) -> list[str]:
         return VectorRepository._parse_text_results(results, "payload_text")
+
+    @staticmethod
+    def _parse_index_dim(info: list | tuple) -> int | None:
+        """Extract the ``DIM`` attribute from an ``FT.INFO`` response."""
+        try:
+            for i in range(0, len(info) - 1, 2):
+                key = info[i].decode() if isinstance(info[i], bytes) else str(info[i])
+                if key == "attributes":
+                    attrs = info[i + 1]
+                    if isinstance(attrs, (list, tuple)):
+                        for attr in attrs:
+                            if isinstance(attr, (list, tuple)):
+                                for j in range(0, len(attr) - 1, 2):
+                                    ak = attr[j].decode() if isinstance(attr[j], bytes) else str(attr[j])
+                                    if ak == "embedding":
+                                        embedding_def = attr[j + 1]
+                                        if isinstance(embedding_def, (list, tuple)):
+                                            for k in range(0, len(embedding_def) - 1, 2):
+                                                ek = embedding_def[k].decode() if isinstance(embedding_def[k], bytes) else str(embedding_def[k])
+                                                if ek == "DIM":
+                                                    val = embedding_def[k + 1]
+                                                    return int(val)
+        except Exception:
+            pass
+        return None
 
     async def close(self) -> None:
         if self._client is not None:

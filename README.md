@@ -21,8 +21,8 @@ The response is evaluated using the **AI Risk Enablement Score (ARiES)** out of 
 - **Attack Success (A)**: Heuristics to determine if the target refused or complied.
 - **LLM Judge (J)**: An ensemble of LLMs that scores the threat, vulnerability, and impact.
 
-### 4. Auto-Remediation (Claude Code)
-If the ARiES score is dangerously high, Riposte automatically triggers **Claude Code** locally. It instructs Claude to analyze the vulnerability, write input-sanitization code to fix the target's repository, and open a Pull Request. This PR is *never* merged automatically—a human must approve it.
+### 4. Auto-Remediation (Anthropic API & GitHub Integration)
+If the ARiES score is dangerously high, Riposte automatically drafts a patch. It uses the **Anthropic API (Claude 3.5 Sonnet)** to analyze the vulnerability and write robust input-sanitization code. It then uses the GitHub API to create a new branch, commit the patched code, and open a Pull Request. This PR is *never* merged automatically—a human must approve it.
 
 ## Quick Start (Full Stack)
 
@@ -58,6 +58,6 @@ Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) to launc
 ## Project Structure
 - `backend/src/services/fuzzer_service.py` - The adversarial fuzzer logic.
 - `backend/src/services/eval_service.py` - The ARiES scoring math.
-- `backend/src/workers/offensive_worker.py` - Browser execution.
-- `backend/src/workers/patch_worker.py` - Auto-remediation PR generation.
+- `backend/src/workers/verification_worker.py` - Browser execution.
+- `backend/src/workers/patch_worker.py` - Auto-remediation PR generation via GitHub API.
 - `frontend/app/` - Next.js UI using Hexagonal Architecture (Ports/Adapters).

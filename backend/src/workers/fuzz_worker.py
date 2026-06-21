@@ -13,6 +13,7 @@ import asyncio
 import logging
 from typing import Awaitable, Callable
 
+from src.config import Settings
 from src.core.models import AttackTask, FuzzTask, TargetResponse
 from src.services.fuzzer_service import AdversarialFuzzer, OptimizationResult
 from src.workers.offensive_worker import TargetExecutor
@@ -28,7 +29,9 @@ async def fuzz_worker(
     semaphore: asyncio.Semaphore,
     on_payload: Callable[[FuzzTask, OptimizationResult | None], Awaitable[None]],
     shutdown_event: asyncio.Event,
+    settings: Settings | None = None,
 ) -> None:
+    timeout = (settings.worker_task_timeout if settings else 300.0)
     while not shutdown_event.is_set():
         try:
             task: FuzzTask | None = await asyncio.wait_for(fuzz_queue.get(), timeout=1.0)
@@ -42,7 +45,7 @@ async def fuzz_worker(
         try:
             await on_payload(task, None)
             query_fn = _make_query_fn(executor, task, semaphore)
-            result = await fuzzer.optimize(task.seed, query_fn)
+            result = await asyncio.wait_for(fuzzer.optimize(task.seed, query_fn), timeout=timeout)
             await on_payload(task, result)
             await attack_queue.put(
                 AttackTask(

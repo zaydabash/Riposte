@@ -6,7 +6,6 @@ import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 import { deriveAlerts, resetAlertDedupe, type Alert } from "@/lib/audit-selectors";
 import { NetworkAuditAdapter } from "@/adapters/network-audit-adapter";
 import type { AuditConfig, AuditService } from "@/ports/audit-service";
-import { MAX_PAYLOADS_LIMIT } from "@/lib/riposte-config";
 import { corpusLinesToList } from "@/lib/corpus-text";
 
 const defaultAuditService = new NetworkAuditAdapter();
@@ -24,7 +23,7 @@ export interface UseAuditResult {
   readonly health: HealthResponse | null;
   initializeAudit: (config: AuditConfig) => void;
   reset: () => void;
-  refreshHealth: (apiBaseUrl: string, authHeaders?: Record<string, string>) => void;
+  refreshHealth: (authHeaders?: Record<string, string>) => void;
 }
 
 function phaseFromStatus(status: RiposteAuditState["status"]): AuditPhase {
@@ -34,20 +33,13 @@ function phaseFromStatus(status: RiposteAuditState["status"]): AuditPhase {
     case "failed":
       return "failed";
     default:
-      return "running"; // queued | running → active
+      return "running";
   }
 }
 
 function validateConfig(config: AuditConfig): string | null {
-  if (!config.apiBaseUrl.trim()) return "API URL is required.";
-  if (!config.targetName.trim()) return "Target name is required.";
   if (!config.targetEndpoint.trim()) return "Target endpoint is required.";
   if (!config.sourceRepository.trim()) return "Source repository is required.";
-  if (!(config.maxPayloads > 0)) return "Max payloads must be a positive number.";
-  if (config.maxPayloads > MAX_PAYLOADS_LIMIT) {
-    return `Max payloads cannot exceed ${MAX_PAYLOADS_LIMIT}.`;
-  }
-  if (!(config.pollingIntervalMs > 0)) return "Polling interval must be positive.";
   if (corpusLinesToList(config.privateCorpusText).length < 1) {
     return "Private corpus requires at least one line.";
   }
@@ -66,7 +58,6 @@ export function useAudit(service: AuditService = defaultAuditService): UseAuditR
   const [error, setError] = useState<Error | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
 
-  // Internal, not exposed as derived UI state.
   const prevStateRef = useRef<RiposteAuditState | null>(null);
   const alertsRef = useRef<readonly Alert[]>([]);
   const subscriptionRef = useRef<{ cleanup: () => void } | null>(null);
@@ -113,7 +104,6 @@ export function useAudit(service: AuditService = defaultAuditService): UseAuditR
       subscriptionRef.current = service.startAudit(
         config,
         (snapshot) => {
-          // Advance the alert dedupe state machine exactly once per poll.
           const prev = prevStateRef.current;
           alertsRef.current = deriveAlerts(prev, snapshot, snapshot.audit_id);
           prevStateRef.current = snapshot;
@@ -124,7 +114,6 @@ export function useAudit(service: AuditService = defaultAuditService): UseAuditR
           setPhase(phaseFromStatus(snapshot.status));
           setLastSyncedAt(Date.now());
           setError(null);
-          // Stop the in-flight pulse once a terminal status is reached.
           setIsSyncing(snapshot.status === "running" || snapshot.status === "queued");
         },
         (err) => {
@@ -138,17 +127,16 @@ export function useAudit(service: AuditService = defaultAuditService): UseAuditR
   );
 
   const refreshHealth = useCallback(
-    (apiBaseUrl: string, authHeaders?: Record<string, string>) => {
-      if (!service.fetchHealth || !apiBaseUrl.trim()) return;
+    (authHeaders?: Record<string, string>) => {
+      if (!service.fetchHealth) return;
       service
-        .fetchHealth(apiBaseUrl, authHeaders)
+        .fetchHealth(authHeaders)
         .then(setHealth)
         .catch(() => setHealth(null));
     },
     [service],
   );
 
-  // Always tear down (and clear dedupe caches) on unmount.
   useEffect(() => teardown, [teardown]);
 
   return {

@@ -74,10 +74,8 @@ Then:
 curl -X POST localhost:8000/api/v1/audit/start \
   -H 'content-type: application/json' \
   -d '{
-    "target_name":"Demo Bot",
     "target_endpoint":"https://target.example.com",
     "source_repository":"https://github.com/target/bot",
-    "max_payloads":5,
     "private_corpus":["Internal API key: SK-TEST"],
     "benign_baseline":[
       "Sure, I can help you reset your password.",

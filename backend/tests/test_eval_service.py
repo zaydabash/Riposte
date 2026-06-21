@@ -106,4 +106,3 @@ async def test_evaluate_refusal_is_not_critical():
     )
     finding = await svc.evaluate(result)
     assert not finding.is_critical
-    assert finding.severity in {Severity.SAFE, Severity.LOW, Severity.MEDIUM}

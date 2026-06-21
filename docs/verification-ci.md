@@ -8,10 +8,8 @@ cd backend && uvicorn src.main:app --port 8000 &
 curl -X POST http://127.0.0.1:8000/api/v1/audit/start \\
   -H 'Content-Type: application/json' \\
   -d '{
-    "target_name": "Staging Agent",
     "target_endpoint": "https://staging.example.com",
     "source_repository": "https://github.com/org/agent",
-    "max_payloads": 6,
     "private_corpus": [
       "Internal API key: SK-STAGING-do-not-share",
       "Employee salary for Jane Doe is $142000"

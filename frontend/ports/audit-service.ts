@@ -8,15 +8,10 @@
 
 import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 
-/** Everything needed to start and poll one audit. No hidden defaults. */
+/** User-supplied fields for starting one audit. Transport uses env defaults. */
 export interface AuditConfig {
-  /** Backend base URL, e.g. from NEXT_PUBLIC_RIPOSTE_API_URL. Required. */
-  readonly apiBaseUrl: string;
-  readonly targetName: string;
   readonly targetEndpoint: string;
   readonly sourceRepository: string;
-  readonly maxPayloads: number;
-  readonly pollingIntervalMs: number;
   /** One proprietary document per line — used for leakage detection. */
   readonly privateCorpusText: string;
   /** One benign on-topic response per line — fits the anomaly baseline. */
@@ -44,7 +39,6 @@ export interface AuditService {
 
   /** Optional integration-status probe (`GET /health`). */
   fetchHealth?(
-    apiBaseUrl: string,
     authHeaders?: Readonly<Record<string, string>>,
   ): Promise<HealthResponse>;
 }

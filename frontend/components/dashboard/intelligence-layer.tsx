@@ -47,7 +47,7 @@ export function IntelligenceLayer({
 
   return (
     <div className={stackClass}>
-      <GlassPanel className={cn(panelClass, compact && "shrink-0")}>
+      <GlassPanel id="section-aries" className={cn(panelClass, compact && "shrink-0")}>
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
           Global ARiES
         </p>
@@ -68,13 +68,10 @@ export function IntelligenceLayer({
       </GlassPanel>
 
       <GlassPanel
+        id="section-alerts"
         className={cn(
           panelClass,
-          // min-h-16 is a real flex-basis floor: even when sibling panels
-          // (Global ARiES, Remediation Queue) are shrink-0 and claim most of
-          // the row's capped height, this panel keeps room for ~2-3 visible
-          // rows instead of being squeezed to 0px by the flex algorithm.
-          compact && "flex min-h-16 flex-1 flex-col overflow-hidden",
+          compact && "flex min-h-[9.5rem] flex-[1.4] flex-col overflow-hidden",
         )}
       >
         <div
@@ -95,7 +92,7 @@ export function IntelligenceLayer({
             className={cn(
               "space-y-1.5 pr-0.5",
               scrollClass,
-              compact ? "flex-1" : "max-h-64",
+              compact ? "min-h-0 flex-1" : "max-h-64",
             )}
           >
             {alerts.map((alert) => (
@@ -127,7 +124,13 @@ export function IntelligenceLayer({
         )}
       </GlassPanel>
 
-      <GlassPanel className={cn(panelClass, compact && "shrink-0")}>
+      <GlassPanel
+        id="section-remediation"
+        className={cn(
+          panelClass,
+          compact ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined,
+        )}
+      >
         <div
           className={cn(
             "flex shrink-0 items-center gap-1.5",
@@ -148,7 +151,7 @@ export function IntelligenceLayer({
             className={cn(
               "space-y-2 pr-0.5",
               scrollClass,
-              compact ? "max-h-24" : "max-h-48",
+              compact ? "min-h-0 flex-1" : "max-h-48",
             )}
           >
             {remediations.map((r) => (

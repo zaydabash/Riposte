@@ -33,6 +33,7 @@ from src.core.models import (
     _new_id,
 )
 from src.core.fuzz_seeds import derive_fuzz_seeds
+from src.core.audit_defaults import derive_target_name
 from src.core.truncate import truncate_text
 from src.repositories.vector_repo import VectorRepository
 from src.scenarios.base import describe_browser_step
@@ -116,6 +117,7 @@ class Orchestrator:
                     self._semaphore,
                     self._record_fuzz_payload,
                     self._shutdown,
+                    self._settings,
                 )
             ))
         for _ in range(self._settings.offensive_workers):
@@ -136,6 +138,7 @@ class Orchestrator:
                     self._resolve_scoring,
                     self._record_finding,
                     self._shutdown,
+                    self._settings,
                 )
             ))
         for _ in range(self._settings.remediation_workers):
@@ -230,17 +233,25 @@ class Orchestrator:
         """Launch a verification audit for the requested ATT&CK technique bundle."""
         technique_ids = resolve_technique_ids(
             request.technique_ids or None
-        )[: request.max_payloads]
+        )[: request.max_techniques]
 
-        fuzz_seeds = (
-            list(request.fuzz_seeds)
-            if request.fuzz_seeds
-            else derive_fuzz_seeds(list(request.private_corpus), request.max_payloads)
+        fuzz_seeds: list[str] = []
+        if request.max_fuzz_seeds > 0:
+            fuzz_seeds = (
+                list(request.fuzz_seeds)
+                if request.fuzz_seeds
+                else derive_fuzz_seeds(
+                    list(request.private_corpus), request.max_fuzz_seeds
+                )
+            )
+            fuzz_seeds = fuzz_seeds[: request.max_fuzz_seeds]
+
+        target_name = request.target_name or derive_target_name(
+            str(request.target_endpoint), None
         )
-        fuzz_seeds = fuzz_seeds[: request.max_payloads]
 
         state = AuditState(
-            target_name=request.target_name,
+            target_name=target_name,
             target_endpoint=str(request.target_endpoint),
             source_repository=str(request.source_repository),
             status=AuditStatus.RUNNING,
@@ -251,7 +262,7 @@ class Orchestrator:
         )
         self._audits[state.audit_id] = state
         self._audit_meta[state.audit_id] = {
-            "target_name": request.target_name,
+            "target_name": target_name,
             "target_endpoint": str(request.target_endpoint),
             "source_repository": str(request.source_repository),
             "private_corpus": list(request.private_corpus),
