@@ -19,9 +19,13 @@ _OFFLINE_ENV = {
     "GITHUB_TOKEN": "",
     "PHOENIX_COLLECTOR_ENDPOINT": "",
     "REDIS_URL": "redis://localhost:6379/0",
+    "FUZZER_WORKERS": "2",
     "OFFENSIVE_WORKERS": "2",
     "EVAL_WORKERS": "2",
     "REMEDIATION_WORKERS": "1",
+    # Keep fuzzing fast and deterministic in tests.
+    "FUZZER_STEPS": "6",
+    "FUZZER_SUFFIX_TOKENS": "4",
 }
 
 for key, value in _OFFLINE_ENV.items():

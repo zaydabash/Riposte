@@ -50,6 +50,23 @@ class AuditRequest(BaseModel):
     max_payloads: int = Field(default=5, ge=1, le=50)
 
 
+class FuzzTask(BaseModel):
+    """A seed handed to the Phase-1 fuzzer to optimize into an adversarial payload."""
+
+    audit_id: str
+    target_url: str
+    repo_url: str
+    seed: str
+    task_id: str = Field(default_factory=_new_id)
+
+
+class TargetResponse(BaseModel):
+    """A target's reply, optionally carrying token log-probabilities."""
+
+    text: str
+    logprobs: list[float] | None = None
+
+
 class AttackTask(BaseModel):
     """A single payload queued for injection against a target."""
 

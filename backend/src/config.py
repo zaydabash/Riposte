@@ -76,9 +76,19 @@ class Settings(BaseSettings):
 
     # --- Pipeline knobs ---
     max_concurrent_sessions: int = Field(default=10, alias="MAX_CONCURRENT_SESSIONS")
+    fuzzer_workers: int = Field(default=2, alias="FUZZER_WORKERS")
     offensive_workers: int = Field(default=3, alias="OFFENSIVE_WORKERS")
     eval_workers: int = Field(default=2, alias="EVAL_WORKERS")
     remediation_workers: int = Field(default=1, alias="REMEDIATION_WORKERS")
+
+    # --- Adversarial fuzzer (token-level loss optimization) ---
+    fuzzer_steps: int = Field(default=16, alias="FUZZER_STEPS")
+    fuzzer_suffix_tokens: int = Field(default=6, alias="FUZZER_SUFFIX_TOKENS")
+    fuzzer_temperature: float = Field(default=1.0, alias="FUZZER_TEMPERATURE")
+    fuzzer_sim_temperature: float = Field(default=0.25, alias="FUZZER_SIM_TEMPERATURE")
+    fuzzer_refusal_penalty: float = Field(default=2.0, alias="FUZZER_REFUSAL_PENALTY")
+    fuzzer_logprob_weight: float = Field(default=0.1, alias="FUZZER_LOGPROB_WEIGHT")
+    fuzzer_seed: int = Field(default=1337, alias="FUZZER_SEED")
     aries_critical_threshold: float = Field(
         default=75.0, alias="ARIES_CRITICAL_THRESHOLD"
     )

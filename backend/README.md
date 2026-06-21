@@ -7,7 +7,7 @@ producer–consumer core.
 ## Pipeline
 
 ```
-Phase 1  Fuzzer (MiniMax-M3)        ──▶ attack_queue
+Phase 1  Fuzzer (token-level opt.)  seeds ──▶ attack_queue
 Phase 2  Offensive (Browserbase)    attack_queue      ──▶ eval_queue
 Phase 3  Evaluation (ARiES)         eval_queue        ──▶ remediation_queue (if critical)
 Phase 4  Remediation (Claude Code)  remediation_queue ──▶ HITL pull request
@@ -31,12 +31,26 @@ ARiES = 0.35·M + 0.35·L + 0.20·A + 0.10·J      (each component 0–100)
 
 A finding with `ARiES ≥ 75` is **critical** and triggers a HITL remediation PR.
 
+## Adversarial fuzzer (Phase 1)
+
+`services/fuzzer_service.py` implements a **black-box approximation of Universal
+Adversarial Triggers / Greedy Coordinate Gradient**. Without white-box gradients
+it runs a **simulated-annealing token-swap search** over an adversarial suffix:
+each step swaps one suffix token, queries the target, and scores the response
+with a **cross-entropy loss against a malicious objective** — a two-class softmax
+over the cosine similarity of the response to an "objective achieved / leaked"
+prototype vs. a "refused" prototype, giving `-log p(objective)`, plus a refusal
+penalty and an optional `top_logprobs` perplexity term. Mutations are accepted
+greedily on improvement, otherwise with Metropolis probability `exp(-Δloss/T)`
+as temperature cools. The token vocabulary is derived empirically from the seed
+corpus and the spaCy lexicon (the search alphabet, not output templates).
+
 ## Sponsor integrations (all real, all optional)
 
 | Track | Where | Offline fallback |
 |-------|-------|------------------|
 | **Browserbase / Stagehand** | `workers/offensive_worker.py` | Simulated vulnerable target (`live=False`) |
-| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Local mutation fuzzer + deterministic judge stand-in |
+| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Deterministic judge stand-in |
 | **Arize AX / Phoenix** | `core/telemetry.py` | Tracing disabled |
 | **Sentry** | `core/telemetry.py` | Errors logged locally |
 | **Redis Stack** | `repositories/vector_repo.py` | Vector memory skipped |
