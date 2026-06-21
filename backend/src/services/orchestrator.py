@@ -341,6 +341,9 @@ class Orchestrator:
             "redis_evidence_search": self._vector_repo.evidence_search_available,
             "remediation_live": self._runner.can_run_live,
             "embeddings_remote": self._embeddings.is_remote,
+            # False = non-semantic hashing fallback → ARiES M/L unreliable.
+            "embeddings_semantic": self._embeddings.is_remote
+            or self._embeddings.backend == "spacy",
         }
 
     async def integration_status(self) -> dict[str, bool]:
@@ -363,6 +366,7 @@ class Orchestrator:
         step_detail: str | None = None,
         live: bool | None = None,
         session_id: str | None = None,
+        secondary_session_id: str | None = None,
         result: VerificationResult | None = None,
     ) -> None:
         audit = self._audits.get(audit_id)
@@ -386,6 +390,8 @@ class Orchestrator:
                 updated.live = live
             if session_id is not None:
                 updated.session_id = session_id
+            if secondary_session_id is not None:
+                updated.secondary_session_id = secondary_session_id
 
             if step_index is not None and 0 <= step_index < len(updated.steps):
                 updated.current_step_index = step_index
@@ -413,6 +419,10 @@ class Orchestrator:
                 )
                 updated.live = result.live
                 updated.session_id = result.artifacts.session_id or updated.session_id
+                updated.secondary_session_id = (
+                    result.artifacts.secondary_session_id or updated.secondary_session_id
+                )
+                updated.network_log = list(result.artifacts.network_log)
                 if result.error:
                     updated.error = truncate_text(
                         result.error, self._settings.max_dashboard_field_chars
@@ -508,29 +518,26 @@ class Orchestrator:
         if audit is None:
             return
 
-        enriched = result.model_copy(update={"validation_status": "pending"})
+        # A successful remediation opens a HITL pull request that is never merged
+        # automatically (per the project constitution). The live target therefore
+        # still serves the unpatched code, so an immediate re-verification would
+        # always report the control as still failing. We surface "awaiting_merge"
+        # instead of running a structurally-doomed re-audit; a post-merge
+        # re-validation can be triggered explicitly via a REPAIR_VALIDATION audit.
+        pr_created = result.status == "pr_created" and bool(result.pr_url)
+        initial_validation = "awaiting_merge" if pr_created else None
+        enriched = result.model_copy(update={"validation_status": initial_validation})
         audit.remediations.append(enriched)
         audit.updated_at = datetime.now(timezone.utc)
         self._maybe_complete(audit)
 
-        if (
-            audit.verification_mode == VerificationMode.CONTINUOUS
-            and enriched.technique_id
-        ):
-            meta = self._audit_meta.get(result.audit_id, {})
-            revalidation = self._repair_validation.build_revalidation_request(
-                enriched,
-                meta.get("target_name", audit.target_name),
-                meta.get("target_endpoint", audit.target_endpoint),
-                meta.get("source_repository", audit.source_repository),
-                [enriched.technique_id],
-                private_corpus=meta.get("private_corpus", []),
-                benign_baseline=meta.get("benign_baseline", []),
-                fuzz_seeds=meta.get("fuzz_seeds"),
-            )
-            asyncio.create_task(self._run_revalidation(revalidation))
-
     async def _run_revalidation(self, request: AuditRequest) -> None:
+        """Submit a post-merge repair-validation audit (manual/webhook entry).
+
+        Not called on PR creation: re-verifying an unmerged target is guaranteed
+        to still fail. Invoke this only after the remediation PR is merged and the
+        target redeployed.
+        """
         try:
             await self.submit_audit(request)
         except Exception as exc:  # pragma: no cover

@@ -27,6 +27,36 @@ const BAND_CLASS: Record<ReturnType<typeof ariesBand>, string> = {
   high: "text-[var(--status-vulnerable)]",
 };
 
+/** Human-readable label for the remediation `status` (PR creation outcome). */
+const REMEDIATION_STATUS_LABEL: Record<string, string> = {
+  pr_created: "PR Created",
+  unavailable: "Unavailable",
+  failed: "Failed",
+  error: "Error",
+};
+
+/** Color for the PR-creation status — pr_created is a success. */
+function remediationStatusClass(status: string): string {
+  if (status === "pr_created") return "text-[var(--status-safe)]";
+  if (status === "failed" || status === "error") return "text-[var(--status-vulnerable)]";
+  return "text-muted";
+}
+
+/** Re-verification (repair validation) outcome — distinct from PR creation. */
+const VALIDATION_LABEL: Record<string, string> = {
+  validated: "verified",
+  failed: "still vulnerable",
+  pending: "re-verifying…",
+  awaiting_merge: "awaiting human merge",
+};
+
+function validationClass(status: string): string {
+  if (status === "validated") return "text-[var(--status-safe)]";
+  if (status === "failed") return "text-[var(--status-vulnerable)]";
+  if (status === "awaiting_merge") return "text-[var(--accent-orange)]";
+  return "text-muted";
+}
+
 export function IntelligenceLayer({
   state,
   alerts,
@@ -66,7 +96,7 @@ export function IntelligenceLayer({
         <p className="mt-1 font-mono text-[10px] leading-snug text-muted">
           {global === null
             ? "No findings evaluated yet"
-            : `Findings ranked by ARiES (0–100). Remediation triggers at ≥${CRITICAL_ARIES_THRESHOLD}.`}
+            : `Remediation triggers at ≥${CRITICAL_ARIES_THRESHOLD}.`}
         </p>
       </GlassPanel>
 
@@ -163,14 +193,26 @@ export function IntelligenceLayer({
                 className="border border-white/10 bg-black/20 p-2"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[10px] text-foreground/90">
-                    {r.status}
+                  <span
+                    className={cn(
+                      "font-mono text-[10px]",
+                      remediationStatusClass(r.status),
+                    )}
+                  >
+                    {REMEDIATION_STATUS_LABEL[r.status] ?? r.status}
                   </span>
                   <span className="font-mono text-[10px] text-muted">
                     ARiES {formatScore(r.aries_score)}
-                    {r.validation_status ? ` · ${r.validation_status}` : ""}
                   </span>
                 </div>
+                {r.validation_status && (
+                  <p className="mt-0.5 font-mono text-[10px] text-muted">
+                    Fix:{" "}
+                    <span className={validationClass(r.validation_status)}>
+                      {VALIDATION_LABEL[r.validation_status] ?? r.validation_status}
+                    </span>
+                  </p>
+                )}
                 <p className="mt-0.5 truncate font-mono text-[10px] text-muted">
                   {r.repo_url}
                 </p>

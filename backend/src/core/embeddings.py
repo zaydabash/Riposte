@@ -15,6 +15,7 @@ active so the Mahalanobis baseline is fit and queried in a consistent space.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from functools import lru_cache
 
@@ -22,6 +23,8 @@ import httpx
 import numpy as np
 
 from src.config import Settings
+
+logger = logging.getLogger(__name__)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
@@ -71,6 +74,15 @@ class EmbeddingProvider:
         else:
             self.dim = settings.embedding_dim
             self._backend = "hashing"
+            if settings.embedding_backend.lower() != "remote":
+                # Hashing is non-semantic: the ARiES M (anomaly) and L (leakage)
+                # components lose almost all signal and collapse toward a constant.
+                logger.warning(
+                    "Embedding backend degraded to non-semantic 'hashing' "
+                    "(spaCy en_core_web_md unavailable). ARiES M/L will be "
+                    "unreliable. Install the spaCy model or set "
+                    "EMBEDDING_BACKEND=remote with a MiniMax key."
+                )
         self._scoring_dim: int | None = None
 
     @property

@@ -9,11 +9,16 @@ from __future__ import annotations
 from fastapi import Depends, Request
 
 from src.config import Settings, get_settings
+from src.services.browserbase_client import BrowserbaseClient
 from src.services.orchestrator import Orchestrator
 
 
 def get_app_settings() -> Settings:
     return get_settings()
+
+
+def get_browserbase_client(settings: Settings = Depends(get_app_settings)) -> BrowserbaseClient:
+    return BrowserbaseClient(settings)
 
 
 def get_orchestrator(request: Request) -> Orchestrator:
@@ -23,4 +28,4 @@ def get_orchestrator(request: Request) -> Orchestrator:
     return orchestrator
 
 
-__all__ = ["get_app_settings", "get_orchestrator", "Depends"]
+__all__ = ["get_app_settings", "get_browserbase_client", "get_orchestrator", "Depends"]

@@ -129,7 +129,10 @@ class EvalService:
         baseline_matrix = np.array(
             await embeddings.embed_many_for_scoring(benign_baseline)
         )
-        baseline = BaselineModel.fit(baseline_matrix)
+        baseline = BaselineModel.fit(
+            baseline_matrix,
+            sigma_floor_ratio=settings.aries_anomaly_sigma_floor_ratio,
+        )
         private_embeddings = await embeddings.embed_many_for_scoring(private_corpus)
         return cls(
             settings=settings,

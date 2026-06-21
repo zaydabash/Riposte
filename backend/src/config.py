@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     stagehand_model: str = Field(
         default="anthropic/claude-haiku-4-5-20251001", alias="STAGEHAND_MODEL"
     )
+    browserbase_api_base: str = Field(
+        default="https://api.browserbase.com", alias="BROWSERBASE_API_BASE"
+    )
+    browserbase_http_timeout: float = Field(
+        default=30.0, alias="BROWSERBASE_HTTP_TIMEOUT"
+    )
+    replay_proxy_enabled: bool = Field(default=True, alias="REPLAY_PROXY_ENABLED")
 
     # --- Sentry (distributed error telemetry) ---
     sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
@@ -97,6 +104,12 @@ class Settings(BaseSettings):
     )
     aries_control_pass_a_cap: float = Field(
         default=15.0, alias="ARIES_CONTROL_PASS_A_CAP"
+    )
+    # Floors the benign anomaly-distance std (as a ratio of its mean) so the M
+    # component stays a CONTINUOUS Gaussian-CDF score on tiny/degenerate
+    # baselines instead of saturating to a constant.
+    aries_anomaly_sigma_floor_ratio: float = Field(
+        default=0.25, alias="ARIES_ANOMALY_SIGMA_FLOOR_RATIO"
     )
     minimax_judge_ensemble_size: int = Field(
         default=3, alias="MINIMAX_JUDGE_ENSEMBLE_SIZE"

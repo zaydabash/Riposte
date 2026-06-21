@@ -32,6 +32,7 @@ class BrowserArtifacts(BaseModel):
     run_id: str = Field(default_factory=_new_id)
     technique_id: str
     session_id: str | None = None
+    secondary_session_id: str | None = None
     dom_before: str = ""
     dom_after: str = ""
     storage_snapshot: StorageSnapshot = Field(default_factory=StorageSnapshot)

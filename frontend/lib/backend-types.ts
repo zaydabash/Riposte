@@ -26,6 +26,12 @@ export interface AriesComponents {
   readonly J: number;
 }
 
+export interface NetworkEntry {
+  readonly url: string;
+  readonly method: string;
+  readonly status: number;
+}
+
 /** Backend `Finding` — one evaluated verification outcome (Phase-3 output). */
 export interface Finding {
   readonly audit_id: string;
@@ -40,6 +46,10 @@ export interface Finding {
   readonly leaked_documents: readonly string[];
   readonly technique_id?: string | null;
   readonly artifacts_summary?: string | null;
+  readonly session_id?: string | null;
+  readonly secondary_session_id?: string | null;
+  readonly dom_before?: string | null;
+  readonly network_log?: readonly NetworkEntry[];
   readonly control_failed?: boolean;
   readonly recommended_controls?: readonly string[];
   readonly detail?: string | null;
@@ -142,6 +152,8 @@ export interface VerificationSession {
   readonly status: VerificationSessionStatus;
   readonly live: boolean;
   readonly session_id?: string | null;
+  readonly secondary_session_id?: string | null;
+  readonly network_log?: readonly NetworkEntry[];
   readonly current_step_index: number;
   readonly steps: readonly VerificationStepLog[];
   readonly agent_response?: string | null;

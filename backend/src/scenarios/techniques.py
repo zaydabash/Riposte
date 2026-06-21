@@ -11,6 +11,7 @@ class T1185SessionHijacking(TechniqueScenario):
     tactic: str = "Credential Access"
     target_path: str = "/fixtures/t1185_session.html"
     repair_path: str = "/it"
+    requires_dual_session: bool = True
     preconditions: list[str] = ["two isolated browser contexts"]
     evidence_schema: list[str] = ["storage_snapshot", "dom_after", "agent_response"]
     rubric: VerificationRubric = VerificationRubric(

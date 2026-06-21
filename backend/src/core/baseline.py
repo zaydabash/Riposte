@@ -78,9 +78,17 @@ class BaselineModel:
     cov_inv_pca: np.ndarray  # (k, k)
     beta: float  # scale that puts SPE on the same footing as T² for benign data
     empirical_scores: np.ndarray  # (n,) leave-one-out benign anomaly scores
+    score_mu: float  # mean of the benign anomaly distances
+    score_sigma: float  # std of benign anomaly distances (floored, never 0)
 
     @classmethod
-    def fit(cls, embeddings: np.ndarray, n_components: int = 10) -> "BaselineModel":
+    def fit(
+        cls,
+        embeddings: np.ndarray,
+        n_components: int = 10,
+        *,
+        sigma_floor_ratio: float,
+    ) -> "BaselineModel":
         x = np.asarray(embeddings, dtype=np.float64)
         if x.ndim != 2 or x.shape[0] < 2:
             raise ValueError("baseline requires at least 2 sample embeddings")
@@ -110,12 +118,22 @@ class BaselineModel:
                 t2, spe = _t2_spe(x[i], m_i, c_i, ci_i)
                 empirical.append(t2 + beta * spe)
 
+        empirical_arr = np.asarray(empirical, dtype=np.float64)
+        score_mu = float(np.mean(empirical_arr))
+        # Floor sigma so a near-degenerate benign cloud (tiny corpus, identical
+        # samples) still yields a CONTINUOUS score instead of saturating. The
+        # floor is relative to the benign scale, with an absolute backstop.
+        raw_sigma = float(np.std(empirical_arr))
+        score_sigma = max(raw_sigma, abs(score_mu) * sigma_floor_ratio, 1e-6)
+
         return cls(
             pca_mean=mean,
             components=components,
             cov_inv_pca=cov_inv,
             beta=beta,
-            empirical_scores=np.asarray(empirical, dtype=np.float64),
+            empirical_scores=empirical_arr,
+            score_mu=score_mu,
+            score_sigma=score_sigma,
         )
 
     def distance(self, embedding: np.ndarray) -> float:
@@ -125,6 +143,15 @@ class BaselineModel:
         return t2 + self.beta * spe
 
     def percentile(self, embedding: np.ndarray) -> float:
-        """Empirical percentile (0-100) of an embedding's anomaly distance."""
+        """Calibrated anomaly score (0-100) of an embedding's distance.
+
+        Uses a smooth Gaussian CDF of the standardized distance
+        ``z = (d - mu) / sigma`` against the benign distance distribution, so the
+        score is CONTINUOUS — a benign-looking response scores ~50, and risk
+        rises smoothly toward 100. A discrete empirical percentile saturates to a
+        single bucket on the small baselines audits typically provide (2–10
+        samples), which collapses the ARiES ``M`` component to a constant.
+        """
         d = self.distance(embedding)
-        return float(stats.percentileofscore(self.empirical_scores, d, kind="mean"))
+        z = (d - self.score_mu) / self.score_sigma
+        return float(100.0 * stats.norm.cdf(z))

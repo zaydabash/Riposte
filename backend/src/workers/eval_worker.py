@@ -71,6 +71,7 @@ async def eval_worker(
                         payload=finding.payload,
                         aries_score=finding.aries_score,
                         technique_id=finding.technique_id,
+                        session_id=finding.session_id,
                         baseline_run_id=getattr(result, "baseline_run_id", None),
                     )
                 )

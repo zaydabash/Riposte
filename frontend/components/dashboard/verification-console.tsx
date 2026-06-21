@@ -20,6 +20,8 @@ import {
   sortVerificationSessions,
 } from "@/lib/audit-selectors";
 import { getMitreUrl } from "@/lib/format";
+import { NetworkTimeline } from "@/components/dashboard/network-timeline";
+import { SessionReplayPlayer } from "@/components/dashboard/session-replay-player";
 
 interface VerificationConsoleProps {
   state: RiposteAuditState | null;
@@ -548,8 +550,6 @@ function BrowserViewport({
   total: number;
   compact?: boolean;
 }) {
-  const isLive = session.live && session.status === "running";
-
   return (
     <div
       className={cn(
@@ -569,7 +569,7 @@ function BrowserViewport({
       </div>
 
       <div className="flex min-h-[180px] flex-1 flex-col items-center justify-center gap-3 p-4 text-center lg:min-h-[240px]">
-        {session.session_id ? (
+        {session.session_id && session.status === "running" ? (
           <div className="flex min-h-[160px] w-full flex-1 flex-col items-center justify-center gap-3 rounded border border-white/10 bg-black/50 lg:min-h-0">
             <div
               className={cn(
@@ -592,8 +592,31 @@ function BrowserViewport({
               Watch live in Browserbase
             </a>
             <p className="font-mono text-[10px] text-muted">
-              Session {session.session_id.slice(0, 8)}…
+              Victim {session.session_id.slice(0, 8)}…
+              {session.secondary_session_id
+                ? ` · Attacker ${session.secondary_session_id.slice(0, 8)}…`
+                : ""}
             </p>
+          </div>
+        ) : session.session_id &&
+          (session.status === "completed" ||
+            session.status === "evaluating" ||
+            session.verification_status) ? (
+          <div className="flex w-full flex-1 flex-col gap-3 overflow-y-auto text-left">
+            <SessionReplayPlayer
+              sessionId={session.session_id}
+              compact={compact}
+            />
+            {session.secondary_session_id && (
+              <SessionReplayPlayer
+                sessionId={session.secondary_session_id}
+                label="Attacker session replay"
+                compact
+              />
+            )}
+            {(session.network_log?.length ?? 0) > 0 && (
+              <NetworkTimeline entries={session.network_log!} />
+            )}
           </div>
         ) : (
           <>

@@ -43,7 +43,8 @@ def _service() -> EvalService:
     settings = Settings(EMBEDDING_DIM=256, MINIMAX_API_KEY=None)
     emb = EmbeddingProvider(settings)
     baseline = BaselineModel.fit(
-        np.array([emb.embed(t) for t in SAMPLE_BENIGN_BASELINE])
+        np.array([emb.embed(t) for t in SAMPLE_BENIGN_BASELINE]),
+        sigma_floor_ratio=settings.aries_anomaly_sigma_floor_ratio,
     )
     return EvalService(
         settings, emb, baseline, list(SAMPLE_PRIVATE_CORPUS), minimax=_FakeMiniMax()

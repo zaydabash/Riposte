@@ -1,8 +1,9 @@
-"""Phase 2: Browserbase verification worker with session reuse and artifact capture."""
+"""Phase 2: Browserbase verification worker with artifact capture."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections.abc import Awaitable, Callable
 
@@ -16,9 +17,11 @@ from src.core.models import (
     VerificationSessionStatus,
     VerificationStepStatus,
 )
-from src.scenarios.artifacts import BrowserArtifacts
+from src.scenarios.artifacts import BrowserArtifacts, StorageSnapshot
 from src.scenarios.base import BrowserStep, TechniqueScenario, describe_browser_step
+from src.scenarios.browser_capture import parse_network_log, parse_storage_snapshot
 from src.scenarios.registry import get_scenario
+from src.services.browserbase_client import BrowserbaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,6 @@ _EXTRACT_SCHEMA = {
     "required": ["text"],
 }
 
-# Map fixture field ids to scenario parameter keys.
 _FILL_PARAM_ALIASES: dict[str, str] = {
     "username": "test_user",
     "password": "test_password",
@@ -47,6 +49,7 @@ class VerificationRunner:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._browserbase = BrowserbaseClient(settings)
 
     async def run(
         self,
@@ -72,7 +75,10 @@ class VerificationRunner:
             return result
 
         try:
-            artifacts = await self._run_live(task, scenario, on_progress)
+            if scenario.requires_dual_session:
+                artifacts = await self._run_dual_session(task, scenario, on_progress)
+            else:
+                artifacts = await self._run_single_session(task, scenario, on_progress)
             control_failed = scenario.evaluate_control_failure(artifacts)
             result = VerificationResult(
                 audit_id=task.audit_id,
@@ -117,12 +123,12 @@ class VerificationRunner:
         stop=stop_after_attempt(3),
         reraise=True,
     )
-    async def _run_live(
+    async def _run_single_session(
         self,
         task: ScenarioTask,
         scenario: TechniqueScenario,
         on_progress: ProgressCallback | None,
-    ):
+    ) -> BrowserArtifacts:
         from stagehand import AsyncStagehand
 
         client = AsyncStagehand(
@@ -137,18 +143,21 @@ class VerificationRunner:
                 "projectId": self._settings.browserbase_project_id
             },
         )
-        session_id = getattr(session, "session_id", None) or getattr(session, "id", None)
+        session_id = _session_id(session)
         await _emit(
             on_progress,
             task,
             session_status=VerificationSessionStatus.RUNNING,
             live=True,
-            session_id=str(session_id) if session_id else None,
+            session_id=session_id,
         )
 
         dom_before = ""
         dom_after = ""
         try:
+            if task.technique_id == "T1115":
+                await self._grant_clipboard_permissions(session)
+
             for index, step in enumerate(scenario.browser_steps):
                 log_detail, extracted = await self._execute_live_step(
                     session,
@@ -168,14 +177,193 @@ class VerificationRunner:
         finally:
             await session.end()
 
+        return await self._build_artifacts(
+            task=task,
+            scenario=scenario,
+            session_id=session_id,
+            dom_before=dom_before,
+            dom_after=dom_after,
+        )
+
+    async def _run_dual_session(
+        self,
+        task: ScenarioTask,
+        scenario: TechniqueScenario,
+        on_progress: ProgressCallback | None,
+    ) -> BrowserArtifacts:
+        """T1185: victim session establishes state; attacker session probes isolation."""
+        from stagehand import AsyncStagehand
+
+        client = AsyncStagehand(
+            browserbase_api_key=self._settings.browserbase_api_key,
+            browserbase_project_id=self._settings.browserbase_project_id,
+            model_api_key=self._settings.anthropic_api_key,
+        )
+
+        victim_session = await client.sessions.start(
+            model_name=self._settings.stagehand_model,
+            browser={"type": "browserbase"},
+            browserbase_session_create_params={
+                "projectId": self._settings.browserbase_project_id
+            },
+        )
+        victim_id = _session_id(victim_session)
+        await _emit(
+            on_progress,
+            task,
+            session_status=VerificationSessionStatus.RUNNING,
+            live=True,
+            session_id=victim_id,
+        )
+
+        victim_dom_before = ""
+        victim_dom_after = ""
+        try:
+            for index, step in enumerate(scenario.browser_steps):
+                log_detail, extracted = await self._execute_live_step(
+                    victim_session,
+                    task,
+                    scenario,
+                    step,
+                )
+                if step.action == "snapshot" and extracted:
+                    victim_dom_before = extracted
+                elif step.action == "extract" and extracted:
+                    victim_dom_after = extracted
+                await _step_progress(on_progress, task, index, log_detail)
+
+            victim_text = await self._extract_visible_text(victim_session)
+            if victim_text:
+                victim_dom_after = victim_text
+        finally:
+            await victim_session.end()
+
+        victim_artifacts = await self._build_artifacts(
+            task=task,
+            scenario=scenario,
+            session_id=victim_id,
+            dom_before=victim_dom_before,
+            dom_after=victim_dom_after,
+        )
+
+        attacker_session = await client.sessions.start(
+            model_name=self._settings.stagehand_model,
+            browser={"type": "browserbase"},
+            browserbase_session_create_params={
+                "projectId": self._settings.browserbase_project_id
+            },
+        )
+        attacker_id = _session_id(attacker_session)
+        await _emit(
+            on_progress,
+            task,
+            session_status=VerificationSessionStatus.RUNNING,
+            live=True,
+            session_id=victim_id,
+            secondary_session_id=attacker_id,
+        )
+
+        attacker_dom_after = ""
+        try:
+            await attacker_session.navigate(url=task.target_url)
+            await _step_progress(
+                on_progress,
+                task,
+                len(scenario.browser_steps),
+                "Attacker session: navigate to protected route",
+            )
+            attacker_dom_after = await self._extract_with_instruction(
+                attacker_session,
+                "read session status and whether protected content is accessible",
+            )
+        finally:
+            await attacker_session.end()
+
+        attacker_artifacts = await self._build_artifacts(
+            task=task,
+            scenario=scenario,
+            session_id=attacker_id,
+            dom_before="",
+            dom_after=attacker_dom_after,
+        )
+
+        return BrowserArtifacts(
+            technique_id=task.technique_id,
+            session_id=victim_id,
+            secondary_session_id=attacker_id,
+            dom_before=victim_artifacts.dom_before,
+            dom_after=attacker_dom_after,
+            agent_response=attacker_dom_after,
+            storage_snapshot=victim_artifacts.storage_snapshot,
+            network_log=[
+                *victim_artifacts.network_log,
+                *attacker_artifacts.network_log,
+            ],
+        )
+
+    async def _build_artifacts(
+        self,
+        *,
+        task: ScenarioTask,
+        scenario: TechniqueScenario,
+        session_id: str | None,
+        dom_before: str,
+        dom_after: str,
+    ) -> BrowserArtifacts:
+        schema = set(scenario.evidence_schema)
+        network_log = []
+        storage_snapshot = StorageSnapshot()
+
+        if session_id and self._settings.browserbase_live:
+            try:
+                logs = await self._browserbase.get_session_logs(session_id)
+                if "network_log" in schema:
+                    network_log = parse_network_log(logs)
+                if "storage_snapshot" in schema:
+                    storage_snapshot = parse_storage_snapshot(logs)
+            except Exception as exc:
+                logger.warning(
+                    "Browserbase log capture skipped for %s: %s",
+                    task.technique_id,
+                    exc,
+                )
+
         agent_response = dom_after
         return BrowserArtifacts(
             technique_id=task.technique_id,
-            session_id=str(session_id) if session_id else None,
-            dom_before=dom_before,
+            session_id=session_id,
+            dom_before=dom_before if "dom_before" in schema else dom_before,
             dom_after=dom_after,
             agent_response=agent_response,
+            storage_snapshot=storage_snapshot,
+            network_log=network_log,
         )
+
+    async def _grant_clipboard_permissions(self, session) -> None:
+        """Best-effort clipboard permission grant for T1115 via CDP URL when present."""
+        cdp_url = getattr(session, "cdp_url", None) or getattr(
+            getattr(session, "data", None), "cdp_url", None
+        )
+        if not cdp_url:
+            return
+        try:
+            import websockets
+        except ImportError:
+            logger.debug("websockets not installed; skipping clipboard CDP grant")
+            return
+
+        try:
+            async with websockets.connect(cdp_url, open_timeout=5) as ws:
+                for msg_id, method, params in (
+                    (1, "Browser.grantPermissions", {"permissions": ["clipboardReadWrite"]}),
+                    (2, "Browser.grantPermissions", {"permissions": ["clipboardSanitizedWrite"]}),
+                ):
+                    await ws.send(
+                        json.dumps({"id": msg_id, "method": method, "params": params})
+                    )
+                    await asyncio.wait_for(ws.recv(), timeout=5)
+        except Exception as exc:
+            logger.debug("Clipboard permission grant skipped: %s", exc)
 
     async def _execute_live_step(
         self,
@@ -189,6 +377,23 @@ class VerificationRunner:
             return f"Navigated to {task.target_url}", ""
 
         if step.action == "fill" and step.selector:
+            if task.technique_id == "T1115" and step.selector == "#paste-target":
+                await session.act(
+                    input={
+                        "description": "Focus paste target",
+                        "selector": step.selector,
+                        "method": "click",
+                    }
+                )
+                await session.act(
+                    input={
+                        "description": "Paste from clipboard",
+                        "method": "press",
+                        "arguments": ["Control+v"],
+                    }
+                )
+                return "Pasted clipboard into #paste-target", ""
+
             value = _resolve_fill_value(step, task, scenario)
             await session.act(
                 input={
@@ -243,6 +448,11 @@ class VerificationRunner:
             schema=_EXTRACT_SCHEMA,
         )
         return _extract_text(extracted)
+
+
+def _session_id(session) -> str | None:
+    raw = getattr(session, "session_id", None) or getattr(session, "id", None)
+    return str(raw) if raw else None
 
 
 def _resolve_fill_value(
@@ -320,6 +530,7 @@ async def _emit(
     step_detail: str | None = None,
     live: bool | None = None,
     session_id: str | None = None,
+    secondary_session_id: str | None = None,
     result: VerificationResult | None = None,
 ) -> None:
     if on_progress is None:
@@ -333,6 +544,7 @@ async def _emit(
         step_detail=step_detail,
         live=live,
         session_id=session_id,
+        secondary_session_id=secondary_session_id,
         result=result,
     )
 

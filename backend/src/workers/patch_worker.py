@@ -131,6 +131,12 @@ class RemediationRunner:
             f"**Context**: {task.payload}\n"
         )
 
+        evidence_hud_link = None
+        if task.session_id:
+            evidence_hud_link = (
+                f"https://www.browserbase.com/sessions/{task.session_id}/debug"
+            )
+
         pr_url = await self._github.create_fix_pr(
             repo_full_name=repo_full_name,
             base_branch=base_branch,
@@ -139,6 +145,7 @@ class RemediationRunner:
             patched_content=patched_content,
             pr_title=pr_title,
             pr_body=pr_body,
+            evidence_hud_link=evidence_hud_link,
         )
 
         return RemediationResult(

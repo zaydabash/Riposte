@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.deps import get_orchestrator
 from src.api.routers import router as audit_router, techniques_router
+from src.api.sessions_router import router as sessions_router
 from src.config import get_settings
 from src.core.telemetry import init_telemetry
 from src.services.orchestrator import Orchestrator
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(audit_router)
     app.include_router(techniques_router)
+    app.include_router(sessions_router)
 
     @app.get("/health", tags=["Health"])
     async def health(orchestrator: Orchestrator = Depends(get_orchestrator)) -> dict:

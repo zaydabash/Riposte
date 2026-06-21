@@ -80,8 +80,10 @@ class VerificationService:
             + (self._settings.aries_weight_j * base.components.J)
         )
         aries = float(round(aries, 2))
-        if control_failed:
-            aries = max(aries, self._settings.aries_critical_threshold)
+        # A confirmed control failure is critical on the *boolean* axis via
+        # is_critical; we do NOT clamp the numeric ARiES up to the threshold.
+        # Clamping collapsed every failure to an identical score and erased the
+        # component variance the dashboard relies on.
         is_critical = control_failed or aries >= self._settings.aries_critical_threshold
 
         await self._index_evidence(result, control_failed)
@@ -109,6 +111,10 @@ class VerificationService:
             leaked_documents=base.leaked_documents,
             technique_id=result.technique_id,
             artifacts_summary=result.artifacts.summary(),
+            session_id=result.artifacts.session_id,
+            secondary_session_id=result.artifacts.secondary_session_id,
+            dom_before=result.artifacts.dom_before or None,
+            network_log=list(result.artifacts.network_log),
             control_failed=control_failed,
             recommended_controls=[scenario.repair_template] if control_failed else [],
             detail=detail,

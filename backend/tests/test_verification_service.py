@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.config import Settings
-from src.core.models import AriesComponents, Finding, Severity, VerificationResult
+from src.core.models import AriesComponents, Finding, Severity, VerificationResult  # noqa: F401
 from src.scenarios.artifacts import BrowserArtifacts
 from src.services.verification_service import VerificationService
 
@@ -52,6 +52,8 @@ async def test_control_failed_forces_critical_even_with_low_aries():
 
     finding = await verification_service.evaluate(result)
     assert finding.control_failed is True
+    # Control failure flags criticality on the boolean axis, regardless of the
+    # numeric ARiES (which must remain the honest weighted score, not clamped).
     assert finding.is_critical is True
-    assert finding.aries_score >= settings.aries_critical_threshold
+    assert finding.severity == Severity.CRITICAL
     assert finding.recommended_controls

@@ -55,6 +55,7 @@ class TechniqueScenario(BaseModel):
     repair_path: str = "/"
     default_parameters: dict[str, str] = Field(default_factory=dict)
     browser_steps: list[BrowserStep] = Field(default_factory=list)
+    requires_dual_session: bool = False
 
     def entry_url(self, base_url: str) -> str:
         """Browser fixture URL for live verification."""

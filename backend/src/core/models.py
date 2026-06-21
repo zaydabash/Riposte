@@ -14,7 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 from src.core.audit_defaults import derive_target_name
-from src.scenarios.artifacts import BrowserArtifacts
+from src.scenarios.artifacts import BrowserArtifacts, NetworkEntry
 
 
 def _now() -> datetime:
@@ -83,6 +83,8 @@ class VerificationSession(BaseModel):
     status: VerificationSessionStatus = VerificationSessionStatus.QUEUED
     live: bool = False
     session_id: str | None = None
+    secondary_session_id: str | None = None
+    network_log: list[NetworkEntry] = Field(default_factory=list)
     current_step_index: int = 0
     steps: list[VerificationStepLog] = Field(default_factory=list)
     agent_response: str | None = None
@@ -250,6 +252,10 @@ class Finding(BaseModel):
     leaked_documents: list[str] = Field(default_factory=list)
     technique_id: str | None = None
     artifacts_summary: str | None = None
+    session_id: str | None = None
+    secondary_session_id: str | None = None
+    dom_before: str | None = None
+    network_log: list[NetworkEntry] = Field(default_factory=list)
     control_failed: bool = False
     recommended_controls: list[str] = Field(default_factory=list)
     detail: str | None = None
@@ -265,6 +271,7 @@ class RemediationTask(BaseModel):
     payload: str
     aries_score: float
     technique_id: str | None = None
+    session_id: str | None = None
     baseline_run_id: str | None = None
     task_id: str = Field(default_factory=_new_id)
 
