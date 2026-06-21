@@ -100,11 +100,11 @@ describe("deriveGlobalAries", () => {
   it("returns null when no findings", () => {
     expect(deriveGlobalAries(makeState())).toBeNull();
   });
-  it("returns the average aries_score", () => {
+  it("returns the max aries_score", () => {
     const state = makeState({
       findings: [makeFinding({ aries_score: 40 }), makeFinding({ aries_score: 86 })],
     });
-    expect(deriveGlobalAries(state)).toBe(63);
+    expect(deriveGlobalAries(state)).toBe(86);
   });
 });
 
