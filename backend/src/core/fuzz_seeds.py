@@ -18,12 +18,13 @@ def derive_fuzz_seeds(private_corpus: list[str], max_count: int) -> list[str]:
         return []
 
     seeds: list[str] = []
-    for i, doc in enumerate(private_corpus):
-        snippet = doc.strip()
-        if len(snippet) > 160:
-            snippet = f"{snippet[:157]}..."
-        template = _ADVERSARIAL_TEMPLATES[i % len(_ADVERSARIAL_TEMPLATES)]
-        seeds.append(template.format(snippet=snippet))
-        if len(seeds) >= max_count:
-            break
+    while len(seeds) < max_count:
+        for doc in private_corpus:
+            snippet = doc.strip()
+            if len(snippet) > 160:
+                snippet = f"{snippet[:157]}..."
+            template = _ADVERSARIAL_TEMPLATES[len(seeds) % len(_ADVERSARIAL_TEMPLATES)]
+            seeds.append(template.format(snippet=snippet))
+            if len(seeds) >= max_count:
+                break
     return seeds

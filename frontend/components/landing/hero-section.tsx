@@ -35,10 +35,7 @@ export function HeroSection() {
           </h1>
 
           <p className="animate-fade-in-up animation-delay-600 mx-auto max-w-3xl text-lg leading-relaxed text-foreground/80 md:text-xl">
-            An autonomous security pipeline for LLM agents. Fuzz your models,
-            verify attacks against real MITRE ATT&CK scenarios, evaluate
-            vulnerabilities mathematically with ARiES, and automatically
-            generate patches to fix them.
+            Stop shipping LLM agents on a prayer. Riposte is an autonomous red-teaming pipeline that actually hits back. It relentlessly fuzzes your models, executes live MITRE ATT&CK scenarios, ruthlessly scores the fallout using ARiES math, and then? It literally writes the patch for you.
           </p>
 
           <div className="animate-fade-in-up animation-delay-800 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">

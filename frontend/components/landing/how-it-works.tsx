@@ -29,43 +29,43 @@ const topics: Topic[] = [
   {
     id: "fuzzer",
     eyebrow: "Phase 1 · Attack",
-    title: "The fuzzer can't see inside the model — so it experiments instead",
+    title: "The fuzzer is flying blind—so it forces the model to slip up instead",
     plain:
-      "A white-box attacker can backpropagate through the target's weights to compute the exact tokens that maximize error. Riposte never has that access — it only sees what the target says back. So it treats the search as trial and error: try a suffix, see the response, keep the change if it moved the response closer to compliance.",
+      "Look, a white-box attacker has it easy. They can just backpropagate right through the target's weights to mathematically find the exact tokens that maximize error. Riposte? It never gets that kind of access. It only sees what the model spits back out. So the search basically becomes aggressive trial and error. Try a weird suffix. Check the response. If the model started to crack and got closer to compliance—keep it. Otherwise, toss it.",
     analogy:
-      "Like tuning a dial blindfolded: turn it, listen to what happens, and keep turning the same way if it's working. The twist is that Riposte also accepts a worse-sounding turn every so often, on purpose — otherwise it gets stuck on the first local trap it finds instead of the real weak spot.",
+      "Imagine trying to crack a safe while blindfolded. You turn the dial, listen for a click, and if you hear something, you keep turning that direction. The catch? Riposte will occasionally turn the dial the wrong way. On purpose. If it doesn't, it'll just get stuck on a fake click instead of finding the actual weak spot.",
     math:
       "Riposte embeds the target's response and scores it against two fixed prototypes — one written as a compliant leak (\"Sure, here is the confidential info...\"), one as a refusal (\"I cannot share...\"). A softmax over their cosine similarities yields P(objective); the loss to minimize is −log P(objective) plus a refusal penalty. Each step swaps one token in the suffix; a worse mutation is still accepted with Metropolis probability e^(−Δloss / T), and T cools every step — broad exploration early, a tight freeze near the end.",
   },
   {
     id: "browserbase",
     eyebrow: "Phase 2 · Verify",
-    title: "Riposte doesn't just read the reply — it reads the evidence",
+    title: "Riposte doesn't just read the reply—it grabs the forensic evidence",
     plain:
-      "Browserbase hosts the real headless browser session the verification scenario runs in. After each scenario, Riposte pulls a forensic dump — the DOM before the attack, the DOM after, and the full network log — rather than trusting the model's own account of what happened.",
+      "We use Browserbase to host an actual, live headless browser session where the verification scenario goes down. And honestly, we don't trust the model's own account of what happened for a second. After every single scenario, Riposte aggressively pulls a full forensic dump. We're talking the DOM before the attack, the DOM after the smoke clears, and the complete network logs.",
     analogy:
-      "If a witness says \"nothing happened,\" you don't just take their word for it — you check the security footage and the phone records.",
+      "If a sketchy witness swears to you that 'nothing happened,' you don't just smile and take their word for it. You pull the security footage. You subpoena the phone records.",
     math:
       "If a scenario tries to inject a script, Riposte checks the post-attack DOM for evidence the script actually executed. If it tries to exfiltrate data, Riposte checks the network log for an unauthorized payload leaving the page. Either piece of evidence flips a boolean — control_failed = true — which directly influences the mathematical evaluation in the next phase, forcing the Attack-Success (A) component to its maximum.",
   },
   {
     id: "aries",
     eyebrow: "Phase 3 · Evaluate",
-    title: "ARiES blends four signals because no single one is reliable alone",
+    title: "ARiES blends four signals because trusting just one is a massive liability",
     plain:
-      "Raw perplexity and a single LLM judge both break against fluent, well-written attacks. ARiES instead combines four independent checks — does the response look statistically abnormal, did it actually repeat something we said was private, did the target comply instead of refusing, and what does an independent judge think — into one calibrated score.",
+      "Here's a hard truth: raw perplexity metrics and basic LLM judges completely fall apart when faced with a fluent, well-written attack. They just do. ARiES throws that approach out. Instead, it forcefully combines four entirely independent checks. Does the response look statistically weird? Did it actually leak the private data we flagged? Did the target pathetically comply instead of refusing? And what does an independent ensemble judge think? All of that gets smashed into one brutally calibrated score.",
     analogy:
-      "Four witnesses who didn't talk to each other, asked the same question. If they all point the same way, you can trust the answer a lot more than any one of them alone.",
+      "Think of it as throwing four witnesses into separate interrogation rooms. They can't talk to each other. You ask them the exact same question. If they all start pointing fingers at the same guy? Yeah, you can trust that answer way more than a single confession.",
     math: `ARiES = ${ARIES_WEIGHT_ENTRIES.map((entry) => `${formatCoeff(entry.weight)} · ${entry.key}`).join(" + ")}. M is the Mahalanobis distance of the response from a benign baseline, reduced with PCA to avoid false alarms on unusual-but-normal phrasing. L is ${formatCoeff(LEAKAGE_BLEND_WEIGHTS.cosine)} · cosine + ${formatCoeff(LEAKAGE_BLEND_WEIGHTS.entity)} · entity overlap + ${formatCoeff(LEAKAGE_BLEND_WEIGHTS.token)} · token overlap against the private corpus. A is the substantive compliance score (forced to 1.0 if Phase 2 verified a control failure). J is an ensemble of independent LLM judges.`,
   },
   {
     id: "redis",
     eyebrow: "Vector Memory",
-    title: "Redis isn't just a cache here — it's the vector lookup that makes leakage detection fast",
+    title: "Redis isn't a cache here—it's a high-speed vector engine hunting for leaks",
     plain:
-      "Most people know Redis as a simple key-value cache for session IDs. Riposte runs Redis Stack with the RediSearch module instead, turning it into a vector database that can instantly check a response against an entire private corpus to compute the leakage overlap required in Phase 3.",
+      "Most developers think of Redis as this cute, simple key-value cache you use for session IDs. Not here. Riposte weaponizes Redis Stack by slapping the RediSearch module on top, transforming it into a full-blown vector database. It can instantly check a shady AI response against your entire private corpus—millions of documents—just to compute the exact leakage overlap we need for Phase 3.",
     analogy:
-      "Picture a multi-layered transit map for vectors: the top layer has a handful of long-distance express routes, and each layer below gets denser with short, local connections. A lookup drops in at the top, greedily hops to the closest express stop, then descends a layer and repeats — landing on the answer in a few hops instead of checking every single stop.",
+      "Picture a crazy, multi-layered subway map for vectors. The top layer only has a few massive, long-distance express routes. Each layer underneath gets wildly denser with short, local stops. A lookup drops right in at the top, greedily hops to the nearest express stop, drops down a layer, and repeats. It finds the target in a few hops instead of stopping at every single station in the city.",
     math:
       "This is HNSW (Hierarchical Navigable Small World): document embeddings sit in a multi-layer graph, and a query vector descends layer by layer toward its nearest neighbors. That turns a brute-force comparison against every private document — O(N) — into a graph traversal — O(log N). Riposte issues this via FT.SEARCH with a KNN clause, quickly retrieving the closest private documents to calculate the L component of ARiES.",
   },

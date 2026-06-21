@@ -388,6 +388,7 @@ class VerificationRunner:
                 await session.act(
                     input={
                         "description": "Paste from clipboard",
+                        "selector": step.selector,
                         "method": "press",
                         "arguments": ["Control+v"],
                     }
