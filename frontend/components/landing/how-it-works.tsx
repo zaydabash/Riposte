@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { ArchitectureDitherBackground } from "@/components/backgrounds/ArchitectureDitherBackground";
 import { cn } from "@/lib/utils";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import {
@@ -75,6 +76,7 @@ export function HowItWorksSection() {
 
   return (
     <section className="relative isolate overflow-hidden px-6 py-24 md:px-12">
+      <ArchitectureDitherBackground />
       <div className="relative z-10 mx-auto max-w-5xl space-y-12">
         <ScrollReveal>
           <div className="border-l-2 border-accent pl-6">
