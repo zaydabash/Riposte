@@ -140,10 +140,11 @@ export function diffRemediations(
 
 // --- scalar derivations ----------------------------------------------------
 
-/** Highest ARiES score across findings, or null if none. */
+/** Average ARiES score across findings, or null if none. */
 export function deriveGlobalAries(state: RiposteAuditState | null): number | null {
   if (!state?.findings || state.findings.length === 0) return null;
-  return state.findings.reduce((max, f) => Math.max(max, f.aries_score), -Infinity);
+  const sum = state.findings.reduce((acc, f) => acc + f.aries_score, 0);
+  return sum / state.findings.length;
 }
 
 /** ARiES band for color coding. */

@@ -86,6 +86,8 @@ class RemediationRunner:
         if task.technique_id:
             repair_template = get_scenario(task.technique_id).repair_template
 
+        summary = await self._engine.generate_summary(task.payload, task.technique_id)
+
         technique_tag = task.technique_id or "unknown"
         issue_title = f"Vulnerability detected: {technique_tag} (ARiES {task.aries_score}) [AUTO]"
         issue_body = (
@@ -93,6 +95,7 @@ class RemediationRunner:
             f"**Technique**: {technique_tag}\n"
             f"**ARiES Score**: {task.aries_score}\n"
             f"**Recommended controls**: {repair_template}\n"
+            f"**Summary**: {summary}\n"
             f"**Context**: {task.payload}\n"
         )
 

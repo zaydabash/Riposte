@@ -26,7 +26,7 @@ const coreEngineComponents: {
     formula: "crossEntropy",
     formula2: "simulatedAnnealing",
     description:
-      "Here's the thing—Riposte is operating completely blind. No gradient access. It's a pure black-box attacker. So it simply shoves random tokens onto a malicious prompt and watches what happens. It gauges Cross-Entropy Loss against these semantic prototypes using Cosine Similarity. And here's where it gets interesting: it deliberately accepts 'worse' mutations using Simulated Annealing and the Metropolis probability. Why? Because if you don't explore the weird, ugly corners of the search space first, you'll get stuck. Then it freezes into that perfect global minimum.",
+      "Because Riposte operates as a black-box tester without direct access to the model's underlying weights, it uses an intelligent trial-and-error approach. It introduces variations into prompts and observes the model's responses, measuring the difference using Cross-Entropy Loss and Cosine Similarity. By using an optimization technique called Simulated Annealing, Riposte occasionally accepts less optimal variations. This helps the system avoid getting stuck and ensures it thoroughly explores the full range of potential vulnerabilities.",
   },
   {
     number: "02",
@@ -34,7 +34,7 @@ const coreEngineComponents: {
     subtitle: "Calibrated Risk Evaluation",
     formula: "aries",
     description:
-      "Let's talk M (Anomaly)—it leans on Hotelling's T² plus SPE residual to hunt down those weird, out-of-distribution hallucinations. Then there's L (Leakage), strictly enforcing lexical grounding with the Overlap Coefficient to aggressively filter out false positives. A (Attack)? It uses logarithmic scaling. It brutally penalizes massive data dumps, but smartly caps the score before it spirals into infinity. And finally, J (Judge)—an ensemble of MiniMax policy judges backed by a paranoid heuristic circuit breaker.",
+      "ARiES combines four core metrics to evaluate risk. The Anomaly (M) score identifies highly unusual responses, helping us catch out-of-distribution hallucinations. The Leakage (L) score checks for data exposure by measuring overlap with your private documents. The Attack (A) score measures the severity of a successful exploit, scaling logarithmically to manage large outputs. Finally, the Judge (J) score incorporates an ensemble of secondary models to independently verify the results.",
   },
   {
     number: "03",
@@ -42,7 +42,7 @@ const coreEngineComponents: {
     subtitle: "Redis HNSW Vector Database",
     formula: "redisSearch",
     description:
-      "Searching millions of private documents? O(N) won't cut it. To instantly compare an AI's response against your entire corpus, we hooked up Redis Stack. But not the standard cache—we're using the Hierarchical Navigable Small World (HNSW) algorithm. By jumping down through a multi-layered vector graph, the search complexity plummets to O(log N). You pull the closest private documents in milliseconds. Literally.",
+      "To evaluate responses against your entire private corpus without slowing down the pipeline, we leverage Redis Stack as a high-performance vector database. By utilizing the Hierarchical Navigable Small World (HNSW) algorithm, we transform what would normally be a slow, exhaustive search into an efficient, multi-layered graph traversal. This allows the system to instantly retrieve and compare the most relevant documents in milliseconds.",
   },
   {
     number: "04",
@@ -50,7 +50,7 @@ const coreEngineComponents: {
     subtitle: "Browserbase & Stagehand",
     formula: "tAdv",
     description:
-      "Dynamic MITRE attack scenarios don't run themselves. Riposte fires them off using Stagehand—translating declarative, plain-English steps straight into hardened Playwright commands. But execution is cheap. The real magic happens after. The Verification Rubric rips apart the captured DOM and tears through the network logs. It's looking for absolute proof that malicious scripts or shady unauthorized APIs were completely blocked.",
+      "Riposte brings attack scenarios to life using Stagehand and Playwright to drive real, headless browser sessions. Once a scenario completes, the true analysis begins: our verification system carefully inspects the resulting page structure (DOM) and network logs. It looks for definitive proof that unauthorized scripts were prevented from running and that API calls were securely restricted.",
   },
 ];
 
@@ -88,7 +88,7 @@ export function ArchitectureSection() {
                 The Problem
               </h3>
               <p className="mt-4 max-w-4xl text-sm leading-relaxed text-muted md:text-base">
-                People just ship these LLM agents. Every single day. No adversarial testing—nothing. It&apos;s wild, honestly. Prompt injection sits right at the top of the OWASP LLM Top 10, which shouldn&apos;t shock anyone, yet we&apos;re out here building the future without a proper toolchain to see if our specific agents will crumble under pressure. Sure, Anthropic spent an entire year painstakingly mapping AI-enabled cyber threats into that massive LLM ATT&amp;CK Navigator. Great. But knowing the taxonomy exists? That&apos;s barely half the battle. Figuring out which of those attacks will actually break your deployment—that&apos;s a totally different beast.
+                We're seeing AI agents being deployed daily, often without the necessary adversarial testing to ensure they're secure. Prompt injection is recognized as a critical vulnerability by OWASP, yet many teams lack the right tools to thoroughly stress-test their deployments before going live. While incredible research like Anthropic's LLM ATT&CK Navigator gives us a map of potential threats, translating that taxonomy into actionable insights for your specific application is where the real challenge lies.
               </p>
             </GlassPanel>
           </ScrollReveal>
@@ -102,7 +102,7 @@ export function ArchitectureSection() {
                 System Overview
               </h3>
               <p className="mt-4 max-w-4xl text-sm leading-relaxed text-muted md:text-base">
-                Riposte isn&apos;t just another scanner—it&apos;s an autonomous red-teaming and remediation framework built to hit hard. It tears through four parallel phases. Planning generates the fuzz seeds; Verification unleashes browser-level attacks; Evaluation runs the math with ARiES; and Remediation? It drafts the code fixes for you. They all fire concurrently across decoupled Python worker pools. And look, networks drop. Rate limits happen. When a live verification step inevitably chokes, Riposte doesn&apos;t just crash and burn. It gracefully flags the run and keeps moving.
+                Riposte is an autonomous security pipeline designed to automatically test and strengthen your AI agents. It operates in four parallel phases: Planning creates the test cases, Verification runs live browser-based simulations, Evaluation scores the results using our ARiES metric, and finally, it generates concrete code patches to fix any identified issues. Built on robust, concurrent Python workers, the system is designed to handle network drops and rate limits gracefully, ensuring reliable performance even in complex environments.
               </p>
             </GlassPanel>
           </ScrollReveal>

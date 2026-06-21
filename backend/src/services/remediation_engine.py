@@ -173,3 +173,40 @@ Rules:
             return None
 
         return fixed
+
+    async def generate_summary(
+        self,
+        payload: str,
+        technique_id: str | None,
+    ) -> str:
+        if self._minimax is None:
+            return payload
+
+        char_limit = self._settings.max_input_chars
+        bounded_payload = payload[:char_limit]
+
+        prompt = f"""You are a security analyst. Create a brief, human-readable summary of what potentially went wrong during this vulnerability test.
+Technique: {technique_id or 'unknown'}
+Context/Finding:
+```
+{bounded_payload}
+```
+
+Rules:
+- Provide a concise paragraph explaining the likely cause or impact of the vulnerability.
+- Do not output markdown code blocks.
+- Do not provide a fix, just a summary.
+"""
+
+        try:
+            completion = await self._minimax.chat.completions.create(
+                model=self._settings.minimax_model,
+                messages=[{"role": "user", "content": prompt}],
+                timeout=self._settings.minimax_remediation_timeout,
+            )
+            text = strip_thinking(completion.choices[0].message.content)
+            summary = text.strip()
+            return summary if summary else payload
+        except Exception as e:
+            logger.warning("Failed to generate summary with MiniMax: %s", e)
+            return payload
