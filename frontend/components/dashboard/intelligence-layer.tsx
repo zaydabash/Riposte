@@ -68,6 +68,10 @@ export function IntelligenceLayer({
   // feed — the queue is driven by state.remediations directly.
   const feedAlerts = alerts.filter((alert) => alert.type !== "new_remediation");
   const remediations = state?.remediations ? [...state.remediations] : [];
+  
+  const findings = state?.findings || [];
+  const criticalCount = findings.filter((f) => f.is_critical || f.aries_score >= 65).length;
+  const remediationsPending = criticalCount > remediations.length;
   remediations.sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || 0,
   );
