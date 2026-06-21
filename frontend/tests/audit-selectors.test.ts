@@ -185,19 +185,24 @@ describe("deriveAlerts dedupe", () => {
 });
 
 describe("deriveActiveStage (conceptual overlay)", () => {
-  it("pulses fuzzer when running with no findings", () => {
-    expect(deriveActiveStage(makeState({ status: "running" }))).toBe("fuzzer");
+  it("pulses plan when running with no findings", () => {
+    expect(deriveActiveStage(makeState({ status: "running" }))).toBe("plan");
   });
   it("returns null when idle with no findings", () => {
     expect(deriveActiveStage(makeState({ status: "completed" }))).toBeNull();
   });
-  it("maps dominant L to the redis (leakage) stage", () => {
+  it("cycles verify/evaluate while running with partial findings", () => {
     const f = makeFinding({ components: { M: 10, L: 95, A: 20, J: 5 } });
-    expect(deriveActiveStage(makeState({ findings: [f] }))).toBe("redis");
+    expect(
+      deriveActiveStage(
+        makeState({ status: "running", queued_payloads: 5, findings: [f] }),
+      ),
+    ).toBe("evaluate");
   });
-  it("prioritizes remediation when remediations exist", () => {
+  it("shows repair when completed with remediations", () => {
     const f = makeFinding();
     const state = makeState({
+      status: "completed",
       findings: [f],
       remediations: [
         {
@@ -212,6 +217,6 @@ describe("deriveActiveStage (conceptual overlay)", () => {
         },
       ],
     });
-    expect(deriveActiveStage(state)).toBe("remediation");
+    expect(deriveActiveStage(state)).toBe("repair");
   });
 });

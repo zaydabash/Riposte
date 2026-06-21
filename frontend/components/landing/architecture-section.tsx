@@ -17,24 +17,24 @@ const integrationLoops: {
   formula: MathFormulaVariant;
 }[] = [
   {
-    title: "ARiES Evaluation",
-    partners: "MiniMax & Arize",
+    title: "ARiES Verification Score",
+    partners: "MiniMax",
     description:
-      "Pure perplexity and single LLM judges break against fluent attacks. Riposte computes a composite ARiES score from Mahalanobis distance, semantic leakage, adversarial robustness, and ensemble judges, logged as multi-turn traces in Phoenix.",
+      "Single judges and raw perplexity miss calibrated risk. Riposte computes a composite verification score from behavioral anomaly, evidence leakage, control failure, and policy-compliance judges.",
     formula: "aries",
   },
   {
-    title: "Gradient Fuzzing",
+    title: "Browser Verification",
     partners: "Browserbase & Stagehand",
     description:
-      "The fuzzer optimizes semantic loss against safety boundaries to generate adversarial payloads. Stagehand injects them via direct DOM locator manipulation, never prompt-injecting the testing agent, and extracts target responses.",
+      "ATT&CK-keyed scenarios run in controlled browser fixtures. Stagehand executes declarative verification steps via structured DOM actions, captures artifact evidence, and never prompt-injects the testing agent.",
     formula: "tAdv",
   },
   {
-    title: "Semantic RAG Leakage",
+    title: "Regression Memory",
     partners: "Redis & Claude Code",
     description:
-      "Redis Vector Search retrieves known private documents. High-dimensional overlap in the leakage score flags exfiltration. Critical hits trigger Claude Code to clone the repo, write a sanitization patch, and open a PR for mandatory HITL review.",
+      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger Claude Code repair proposals and mandatory HITL re-verification before merge.",
     formula: "leakage",
   },
 ];
@@ -48,27 +48,27 @@ const pillars: {
 }[] = [
   {
     number: "01",
-    title: "Attack Engine",
+    title: "Browser Verification",
     sponsor: "Browserbase & Stagehand",
     formula: "tAdv",
     description:
-      "Rate-limited offensive worker pool. Stagehand navigates the target DOM, fills inputs via locators, and queues responses for evaluation, guarded by semaphores and asyncio queues.",
+      "ATT&CK scenario runner with session reuse, declarative DOM steps, and artifact capture. Rate-limited via semaphores; fail-closed on live verification errors.",
   },
   {
     number: "02",
-    title: "State & Context Matrix",
+    title: "Regression Memory",
     sponsor: "Redis Stack",
     formula: "redisSearch",
     description:
-      "Binary-safe vector memory for payload history and private corpus embeddings. FT.SEARCH retrieves similar attacks and known secrets for leakage scoring.",
+      "Binary-safe vector memory for evidence summaries and private corpus embeddings. FT.SEARCH surfaces similar past control failures for continuous verification.",
   },
   {
     number: "03",
-    title: "Scientific Evaluator",
-    sponsor: "Arize Phoenix",
+    title: "Calibrated Evaluator",
+    sponsor: "MiniMax",
     formula: "aries",
     description:
-      "Mathematical referee combining PCA-reduced Mahalanobis percentiles, composite semantic leakage, adversarial robustness, and ensemble LLM judges. Critical at ARiES ≥ 75.",
+      "Verification score combining behavioral anomaly, evidence leakage, control failure, and policy-compliance judges. Critical at ARiES ≥ 75.",
   },
   {
     number: "04",
@@ -76,15 +76,15 @@ const pillars: {
     sponsor: "Sentry",
     formula: "trace",
     description:
-      "OpenTelemetry and Sentry instrumentation across the pipeline. Prompts and PII are never logged: send_default_pii=False, include_prompts=False.",
+      "Sentry error instrumentation across the pipeline. Prompts and PII are never logged: send_default_pii=False, include_prompts=False.",
   },
   {
     number: "05",
-    title: "Autonomous Mechanic",
+    title: "Repair Plane",
     sponsor: "Claude Code",
     formula: "prFix",
     description:
-      "Auto-remediation worker spins Claude Code to implement input sanitization and open a pull request. Automatic merge is forbidden; every patch requires human approval.",
+      "Repair worker proposes defensive patches via Claude Code and opens HITL pull requests. Re-verification runs the same ATT&CK scenarios before merge.",
   },
 ];
 
@@ -99,7 +99,7 @@ const pipelineSteps = [
   },
   {
     label: "Semantic Evaluation",
-    detail: "eval_service computes ARiES; Phoenix logs component traces",
+    detail: "eval_service computes ARiES from artifact evidence and technique rubrics",
   },
   {
     label: "HITL Remediation",

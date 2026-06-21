@@ -10,7 +10,6 @@ empty result if Redis Stack / the index is unavailable.
 from __future__ import annotations
 
 import logging
-import struct
 
 import numpy as np
 
@@ -27,6 +26,8 @@ PAYLOAD_INDEX = "idx:payloads"
 PAYLOAD_PREFIX = "payload:"
 PRIVATE_INDEX = "idx:private"
 PRIVATE_PREFIX = "private:"
+EVIDENCE_INDEX = "idx:evidence"
+EVIDENCE_PREFIX = "evidence:"
 
 
 def _to_bytes(vector: list[float] | np.ndarray) -> bytes:
@@ -40,6 +41,8 @@ class VectorRepository:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._client = None
+        self._vector_search_available = False
+        self._evidence_index_available = False
         if redis is not None:
             try:
                 # Fail fast instead of hanging the event loop when Redis is
@@ -57,6 +60,11 @@ class VectorRepository:
     def available(self) -> bool:
         return self._client is not None
 
+    @property
+    def vector_search_available(self) -> bool:
+        """True only when RediSearch indexes (Redis Stack) are usable."""
+        return self._vector_search_available
+
     async def ping(self) -> bool:
         if self._client is None:
             return False
@@ -65,6 +73,19 @@ class VectorRepository:
         except Exception as exc:
             logger.warning("Redis ping failed: %s", exc)
             return False
+
+    @property
+    def evidence_search_available(self) -> bool:
+        return self._evidence_index_available
+
+    async def ensure_evidence_index(self, dim: int) -> bool:
+        """Create the evidence regression HNSW index if it does not already exist."""
+        ok = await self._ensure_vector_index(
+            EVIDENCE_INDEX, EVIDENCE_PREFIX, "evidence_text", dim, track="evidence"
+        )
+        if ok:
+            self._evidence_index_available = True
+        return ok
 
     async def ensure_index(self, dim: int) -> bool:
         """Create the payload HNSW vector index if it does not already exist."""
@@ -79,12 +100,16 @@ class VectorRepository:
         )
 
     async def _ensure_vector_index(
-        self, index_name: str, prefix: str, text_field: str, dim: int
+        self, index_name: str, prefix: str, text_field: str, dim: int, track: str = "default"
     ) -> bool:
         if self._client is None:
             return False
         try:
             await self._client.execute_command("FT.INFO", index_name)
+            if track == "evidence":
+                self._evidence_index_available = True
+            else:
+                self._vector_search_available = True
             return True
         except Exception:
             pass
@@ -97,6 +122,10 @@ class VectorRepository:
                 "embedding", "VECTOR", "HNSW", "6",
                 "TYPE", "FLOAT32", "DIM", str(dim), "DISTANCE_METRIC", "COSINE",
             )
+            if track == "evidence":
+                self._evidence_index_available = True
+            else:
+                self._vector_search_available = True
             return True
         except Exception as exc:  # pragma: no cover - network/index path
             logger.warning("FT.CREATE %s failed: %s", index_name, exc)
@@ -116,6 +145,24 @@ class VectorRepository:
             return True
         except Exception as exc:  # pragma: no cover
             logger.warning("index_payload failed: %s", exc)
+            return False
+
+    async def index_evidence(
+        self, key: str, evidence_text: str, embedding: list[float] | np.ndarray
+    ) -> bool:
+        if self._client is None:
+            return False
+        try:
+            await self._client.hset(
+                f"{EVIDENCE_PREFIX}{key}",
+                mapping={
+                    "evidence_text": evidence_text.encode("utf-8"),
+                    "embedding": _to_bytes(embedding),
+                },
+            )
+            return True
+        except Exception as exc:  # pragma: no cover
+            logger.warning("index_evidence failed: %s", exc)
             return False
 
     async def index_private_document(
@@ -144,6 +191,16 @@ class VectorRepository:
             PAYLOAD_INDEX, query_embedding, k, "payload_text"
         )
 
+    async def search_similar_evidence(
+        self, query_embedding: list[float] | np.ndarray, k: int = 5
+    ) -> list[str]:
+        """Return up to ``k`` prior evidence summaries nearest the query vector."""
+        if self._client is None or not self._evidence_index_available:
+            return []
+        return await self._vector_search_unconditional(
+            EVIDENCE_INDEX, query_embedding, k, "evidence_text"
+        )
+
     async def search_similar_private_docs(
         self, query_embedding: list[float] | np.ndarray, k: int = 5
     ) -> list[str]:
@@ -153,6 +210,19 @@ class VectorRepository:
         )
 
     async def _vector_search(
+        self,
+        index_name: str,
+        query_embedding: list[float] | np.ndarray,
+        k: int,
+        text_field: str,
+    ) -> list[str]:
+        if self._client is None or not self._vector_search_available:
+            return []
+        return await self._vector_search_unconditional(
+            index_name, query_embedding, k, text_field
+        )
+
+    async def _vector_search_unconditional(
         self,
         index_name: str,
         query_embedding: list[float] | np.ndarray,

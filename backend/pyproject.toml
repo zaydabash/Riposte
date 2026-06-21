@@ -18,15 +18,12 @@ dependencies = [
     # --- sponsor integrations (optional at runtime; pipeline degrades gracefully) ---
     "stagehand>=0.4",
     "sentry-sdk>=2.18",
-    "arize-otel>=0.7",
-    "openinference-instrumentation-openai>=0.1",
     "spacy>=3.7",
     # Real 300-d GloVe vectors for the ARiES anomaly + leakage math (CPU, no torch).
     "en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
-phoenix = ["arize-phoenix-otel>=0.6"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",

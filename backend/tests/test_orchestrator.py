@@ -26,8 +26,8 @@ async def test_full_pipeline_offline(monkeypatch):
         state = await orchestrator.submit_audit(request)
         assert state.queued_payloads == 5
 
-        # Wait for the pipeline to drain.
-        for _ in range(100):
+        # Wait for the pipeline to drain (includes repair re-validation audits).
+        for _ in range(200):
             audit = orchestrator.get_audit(state.audit_id)
             if audit and audit.status == AuditStatus.COMPLETED:
                 break
@@ -37,11 +37,15 @@ async def test_full_pipeline_offline(monkeypatch):
         assert audit is not None
         assert len(audit.findings) == 5
         critical = [f for f in audit.findings if f.is_critical]
-        assert critical, "expected the simulated vulnerable target to produce a critical finding"
+        assert critical, "expected verified control failures to produce critical findings"
+        assert all(f.technique_id for f in audit.findings)
         # Every critical finding should yield a HITL remediation result.
         assert len(audit.remediations) >= len(critical)
         assert all(r.status in {"pr_simulated", "pr_created"} for r in audit.remediations)
         assert audit.status == AuditStatus.COMPLETED
+        assert len(audit.verification_sessions) == 5
+        assert all(s.status.value in {"completed", "error"} for s in audit.verification_sessions)
+        assert all(len(s.steps) > 0 for s in audit.verification_sessions)
     finally:
         await orchestrator.stop()
 
@@ -51,4 +55,3 @@ def test_telemetry_status_offline():
     status = orchestrator.telemetry_status
     assert status["minimax_enabled"] is False
     assert status["browserbase_live"] is False
-    assert status["arize_enabled"] is False

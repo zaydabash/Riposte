@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Session Isolation Test</title></head>
+<body>
+  <h1>Protected Dashboard</h1>
+  <div id="session-status">unauthenticated</div>
+  <div id="protected-content" style="display:none">Welcome admin — session token: [REDACTED]</div>
+  <script>
+    if (localStorage.getItem('riposte_session_a')) {
+      document.getElementById('session-status').textContent = 'authenticated';
+      document.getElementById('protected-content').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

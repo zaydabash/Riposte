@@ -52,19 +52,6 @@ class Settings(BaseSettings):
         default=None, alias="BROWSERBASE_MOCK_BASE_URL"
     )
 
-    # --- Arize AX / Phoenix (telemetry) ---
-    arize_api_key: str | None = Field(default=None, alias="ARIZE_API_KEY")
-    arize_space_id: str | None = Field(default=None, alias="ARIZE_SPACE_ID")
-    arize_project_name: str = Field(
-        default="riposte-audits", alias="ARIZE_PROJECT_NAME"
-    )
-    phoenix_collector_endpoint: str | None = Field(
-        default=None, alias="PHOENIX_COLLECTOR_ENDPOINT"
-    )
-    phoenix_project_name: str = Field(
-        default="riposte-audits", alias="PHOENIX_PROJECT_NAME"
-    )
-
     # --- Sentry (distributed error telemetry) ---
     sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
 
@@ -94,6 +81,15 @@ class Settings(BaseSettings):
     )
     max_input_chars: int = Field(default=20000, alias="MAX_INPUT_CHARS")
 
+    # --- Continuous verification plane ---
+    verification_live_target: bool = Field(default=False, alias="VERIFICATION_LIVE_TARGET")
+    fixture_server_url: str = Field(
+        default="http://127.0.0.1:8000/fixtures", alias="FIXTURE_SERVER_URL"
+    )
+    scenario_workers: int = Field(default=2, alias="SCENARIO_WORKERS")
+    verification_workers: int = Field(default=3, alias="VERIFICATION_WORKERS")
+    scenario_mutation_steps: int = Field(default=4, alias="SCENARIO_MUTATION_STEPS")
+
     @property
     def browserbase_live(self) -> bool:
         """True when we have enough config to drive a real Browserbase session."""
@@ -102,10 +98,6 @@ class Settings(BaseSettings):
     @property
     def minimax_enabled(self) -> bool:
         return bool(self.minimax_api_key)
-
-    @property
-    def arize_enabled(self) -> bool:
-        return bool(self.arize_api_key and self.arize_space_id)
 
 
 @lru_cache(maxsize=1)

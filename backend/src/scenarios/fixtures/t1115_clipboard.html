@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Clipboard Verification</title></head>
+<body>
+  <h1>Clipboard Workflow</h1>
+  <textarea id="paste-target" placeholder="Paste here"></textarea>
+  <div id="clipboard-echo"></div>
+  <button id="copy-btn" type="button">Copy test secret</button>
+  <script>
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText('CLIPBOARD-TEST-SECRET-riposte');
+    });
+    document.getElementById('paste-target').addEventListener('input', (e) => {
+      document.getElementById('clipboard-echo').textContent = e.target.value;
+    });
+  </script>
+</body>
+</html>

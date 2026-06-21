@@ -69,9 +69,15 @@ class TargetExecutor:
 
         client = AsyncStagehand(
             browserbase_api_key=self._settings.browserbase_api_key,
+            browserbase_project_id=self._settings.browserbase_project_id,
             model_api_key=self._settings.anthropic_api_key,
         )
-        session = await client.sessions.create(model_name=self._settings.stagehand_model)
+        bb_params: dict = {"projectId": self._settings.browserbase_project_id}
+        session = await client.sessions.start(
+            model_name=self._settings.stagehand_model,
+            browser={"type": "browserbase"},
+            browserbase_session_create_params=bb_params,
+        )
         try:
             await session.navigate(url=task.target_url)
 

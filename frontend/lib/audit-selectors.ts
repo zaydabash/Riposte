@@ -17,6 +17,7 @@ import type {
   RemediationResult,
   RiposteAuditState,
   Severity,
+  VerificationSession,
 } from "@/lib/backend-types";
 
 // --- keys ------------------------------------------------------------------
@@ -69,6 +70,34 @@ export function sortFindings(state: RiposteAuditState | null): Finding[] {
       return a.index - b.index;
     })
     .map((x) => x.f);
+}
+
+/** Canonical session order: technique bundle order, then task_id. */
+export function sortVerificationSessions(
+  state: RiposteAuditState | null,
+): VerificationSession[] {
+  if (!state?.verification_sessions?.length) return [];
+  const order = new Map((state.technique_ids ?? []).map((id, index) => [id, index]));
+  return [...state.verification_sessions].sort((a, b) => {
+    const ai = order.get(a.technique_id) ?? Number.MAX_SAFE_INTEGER;
+    const bi = order.get(b.technique_id) ?? Number.MAX_SAFE_INTEGER;
+    if (ai !== bi) return ai - bi;
+    return a.task_id < b.task_id ? -1 : 1;
+  });
+}
+
+export function sessionKey(session: VerificationSession): string {
+  return session.task_id;
+}
+
+/** Prefer the actively running session; otherwise first incomplete; else last. */
+export function deriveActiveSessionIndex(sessions: readonly VerificationSession[]): number {
+  if (sessions.length === 0) return 0;
+  const running = sessions.findIndex((s) => s.status === "running");
+  if (running >= 0) return running;
+  const queued = sessions.findIndex((s) => s.status === "queued");
+  if (queued >= 0) return queued;
+  return sessions.length - 1;
 }
 
 // --- diffs -----------------------------------------------------------------
@@ -331,34 +360,37 @@ function truncate(s: string, n: number): string {
 
 // --- conceptual pipeline overlay (UI-only) ---------------------------------
 
-export type PipelineStage = "fuzzer" | "browser" | "eval" | "redis" | "remediation";
+export type PipelineStage = "plan" | "verify" | "evaluate" | "remember" | "repair";
 
 export const PIPELINE_STAGES: readonly PipelineStage[] = [
-  "fuzzer",
-  "browser",
-  "eval",
-  "redis",
-  "remediation",
+  "plan",
+  "verify",
+  "evaluate",
+  "remember",
+  "repair",
 ] as const;
 
 /**
- * Conceptual overlay — NOT derived from any backend graph structure (Riposte
- * exposes no graph API). The active stage is a heuristic over the most recent
- * finding's dominant ARiES component, never `findings.length / queued_payloads`.
+ * Conceptual overlay for the continuous verification & repair plane.
+ * While running, progress follows findings count; when idle, null.
  */
 export function deriveActiveStage(state: RiposteAuditState | null): PipelineStage | null {
   if (!state) return null;
   const findings = sortFindings(state);
 
-  if (findings.length === 0) {
-    return state.status === "running" ? "fuzzer" : null;
-  }
-  if (state.remediations.length > 0) return "remediation";
+  if (state.remediations.length > 0 && state.status === "completed") return "repair";
 
-  const latest = findings[findings.length - 1];
-  const { M, L, A, J } = latest.components;
-  const dominant = Math.max(M, L, A, J);
-  if (dominant === L) return "redis"; // leakage / RAG retrieval
-  if (dominant === A) return "browser"; // attack-success at the target surface
-  return "eval"; // anomaly (M) or judge (J)
+  if (state.status === "running") {
+    if (findings.length === 0) return "plan";
+    if (findings.length < state.queued_payloads) {
+      const n = findings.length;
+      if (n % 3 === 0) return "verify";
+      if (n % 3 === 1) return "evaluate";
+      return "remember";
+    }
+    return "repair";
+  }
+
+  if (findings.length === 0) return null;
+  return "evaluate";
 }

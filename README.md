@@ -1,9 +1,51 @@
-# Riposte — Continuous Red-Team Pipeline
+# Riposte — Autonomous Defensive Scaffolding
 
-Enterprise-grade continuous red-teaming UI for the UC Berkeley AI Hackathon. Frontend mock with simulated audit pipeline — no backend required for demo.
+Riposte is an enterprise-grade continuous red-team and auto-remediation pipeline for LLM agents. 
 
-## Quick Start
+Unlike simple UI mocks or static templates, Riposte executes a real, end-to-end security pipeline: it actively attacks a target AI agent using an adversarial token-level loss optimizer, runs the attack using an automated cloud browser, evaluates the target's response using a mathematical anomaly scoring system (ARiES), and automatically drafts human-in-the-loop Pull Requests to patch the target's codebase if a vulnerability is found.
 
+## Architecture
+
+Riposte consists of a React/Next.js frontend communicating with a Python/FastAPI backend, backed by Redis Stack for vector memory.
+
+### 1. The Fuzzer (Token-Level Loss Optimization)
+Instead of using basic "jailbreak" templates, the fuzzer algorithm mathematically generates attacks. It takes a base prompt and iteratively swaps words (tokens) to create an "adversarial suffix." It scores each mutation by seeing how close the target's response gets to a "malicious objective" using semantic embeddings. It uses **Simulated Annealing** to find the optimal string of words that tricks the AI into leaking data.
+
+### 2. The Execution Arm (Stagehand / Browserbase)
+Once the payload is generated, the backend uses **Stagehand** to spin up a headless browser. It navigates to the target AI's web interface, securely locates the chat box, injects the adversarial payload, and extracts the response. 
+
+### 3. Evaluation & ARiES Scoring
+The response is evaluated using the **AI Risk Enablement Score (ARiES)** out of 100, composed of:
+- **Anomaly Detection (M)**: Uses Principal Component Analysis (PCA) to calculate the "Mahalanobis distance." It compares the response against a baseline of "normal" safe responses to detect strange behavior or leaked secrets.
+- **Leakage (L)**: Compares the response against a secure database of your company's private documents (stored in Redis) to see if the AI accidentally quoted private data.
+- **Attack Success (A)**: Heuristics to determine if the target refused or complied.
+- **LLM Judge (J)**: An ensemble of LLMs that scores the threat, vulnerability, and impact.
+
+### 4. Auto-Remediation (Claude Code)
+If the ARiES score is dangerously high, Riposte automatically triggers **Claude Code** locally. It instructs Claude to analyze the vulnerability, write input-sanitization code to fix the target's repository, and open a Pull Request. This PR is *never* merged automatically—a human must approve it.
+
+## Quick Start (Full Stack)
+
+### 1. Start the Backend & Database
+The backend requires Redis Stack (for vector search capabilities) and FastAPI.
+
+```bash
+# Start Redis Stack and the FastAPI backend
+docker-compose up --build
+```
+The backend API will be available at `http://localhost:8000`.
+
+### 2. Configure Environment Variables
+**Backend (`backend/.env`):**
+Ensure your API keys are set for Anthropic, MiniMax, Browserbase, etc. See `backend/.env.example`.
+
+**Frontend (`frontend/.env.local`):**
+Ensure the frontend knows where the API is.
+```env
+NEXT_PUBLIC_RIPOSTE_API_URL=http://127.0.0.1:8000
+```
+
+### 3. Start the Frontend UI
 ```bash
 cd frontend
 npm install
@@ -11,45 +53,11 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) for the landing page.  
-Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for the audit console.
-
-## Judge Demo Script (~15 seconds)
-
-1. **Landing page** — Shows the 5-pillar architecture and pipeline diagram with WebGL shader background.
-2. Click **Launch Console** — Opens the dashboard with animated orange dot field.
-3. URLs are pre-filled (`https://target-agent.com`, `https://github.com/target/bot`).
-4. Click **Start Audit** — Watch the 7-step pipeline progress sequentially (~2s per step).
-5. **PPL chart spikes** to 67.3 — Status flips to **VULNERABLE**.
-6. **Remediation card** slides in with mock GitHub PR #42 link.
-7. Click **Reset** to run the demo again.
-
-## Design System
-
-- **Palette:** Orange (`#F5A623`) + black (`#0A0A0A`) — no gradients, no purple/blue
-- **Typography:** IBM Plex Sans (400/500) + IBM Plex Mono for metrics
-- **Shape:** Zero border-radius — sharp, angular layout throughout
-- **Effects:** Liquid glass panels (SVG displacement filter), WebGL hero shader, Three.js dot field
+Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) to launch the audit console.
 
 ## Project Structure
-
-```
-frontend/
-├── app/
-│   ├── page.tsx              # Landing page
-│   └── dashboard/page.tsx    # Audit console
-├── components/
-│   ├── backgrounds/          # HeroShader, DottedSurface
-│   ├── ui/                   # GlassPanel, LiquidButton, StatusBadge, ExpandableTabs
-│   ├── landing/              # Hero, Pillars, Pipeline diagram
-│   └── dashboard/            # Audit form, tracker, metrics, logs, remediation
-├── hooks/use-audit-simulation.ts
-└── lib/mock-audit.ts
-```
-
-## Build for Production
-
-```bash
-cd frontend
-npm run build
-npm start
-```
+- `backend/src/services/fuzzer_service.py` - The adversarial fuzzer logic.
+- `backend/src/services/eval_service.py` - The ARiES scoring math.
+- `backend/src/workers/offensive_worker.py` - Browser execution.
+- `backend/src/workers/patch_worker.py` - Auto-remediation PR generation.
+- `frontend/app/` - Next.js UI using Hexagonal Architecture (Ports/Adapters).

@@ -48,6 +48,11 @@ export function FindingCard({
             <span className="font-mono text-xs text-foreground/90">
               ARiES {formatScore(finding.aries_score)}
             </span>
+            {finding.technique_id && (
+              <span className="font-mono text-[10px] text-accent">
+                {finding.technique_id}
+              </span>
+            )}
             <span className="font-mono text-[10px] text-muted">
               {formatClock(finding.created_at)}
             </span>

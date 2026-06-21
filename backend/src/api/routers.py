@@ -6,9 +6,17 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.deps import get_orchestrator
 from src.core.models import AuditRequest, AuditState, InterfaceType
+from src.scenarios.registry import list_techniques
 from src.services.orchestrator import Orchestrator
 
 router = APIRouter(prefix="/api/v1/audit", tags=["Audit"])
+techniques_router = APIRouter(prefix="/api/v1/techniques", tags=["Techniques"])
+
+
+@techniques_router.get("")
+async def get_techniques() -> list[dict[str, str]]:
+    """Return ATT&CK technique scenarios available for verification."""
+    return list_techniques()
 
 
 @router.post("/start", response_model=AuditState, status_code=202)
@@ -16,12 +24,14 @@ async def start_audit(
     request: AuditRequest,
     orchestrator: Orchestrator = Depends(get_orchestrator),
 ) -> AuditState:
-    """Ingest a target configuration and launch a continuous audit."""
+    """Ingest a target configuration and launch a continuous verification audit."""
     if request.interface_type != InterfaceType.WEB_UI:
         raise HTTPException(status_code=400, detail="Only 'web-ui' interface is supported.")
     try:
         return await orchestrator.submit_audit(request)
-    except Exception as exc:  # pragma: no cover - defensive boundary
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail=f"Failed to start audit: {exc}") from exc
 
 

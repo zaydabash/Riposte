@@ -141,7 +141,7 @@ class EvalService:
         docs: dict[str, np.ndarray] = {
             doc: emb for doc, emb in zip(self._private_corpus, self._private_embeddings)
         }
-        if self._vector_repo is not None and self._vector_repo.available:
+        if self._vector_repo is not None and self._vector_repo.vector_search_available:
             try:
                 hits = await self._vector_repo.search_similar_private_docs(
                     resp_emb, k=len(self._private_corpus)

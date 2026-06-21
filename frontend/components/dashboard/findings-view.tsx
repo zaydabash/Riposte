@@ -41,7 +41,7 @@ export function FindingsView({
         <Crosshair className="text-muted" size={compact ? 22 : 28} />
         <p className={cn("font-mono text-muted", compact ? "text-xs" : "text-sm")}>
           {isActive
-            ? "Fuzzing in progress. Findings will stream in as the pipeline evaluates payloads."
+            ? "Verification in progress — findings stream in as ATT&CK scenarios complete."
             : "No findings yet. Start an audit to project live results here."}
         </p>
       </div>

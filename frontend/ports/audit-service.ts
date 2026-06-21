@@ -3,7 +3,7 @@
  *
  * Components and hooks depend only on this interface — never on `fetch` directly.
  * The MVP implementation is the HTTP-polling {@link NetworkAuditAdapter}; future
- * transports (SSE, Redis pub/sub, Arize trace bridge) implement the same port.
+ * transports (SSE, Redis pub/sub) implement the same port.
  */
 
 import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";

@@ -16,11 +16,11 @@ interface SystemGraphProps {
 }
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
-  fuzzer: "Fuzzer",
-  browser: "Browser",
-  eval: "Eval",
-  redis: "Redis",
-  remediation: "Remediation",
+  plan: "Plan",
+  verify: "Verify",
+  evaluate: "Evaluate",
+  remember: "Remember",
+  repair: "Repair",
 };
 
 /**
@@ -35,7 +35,7 @@ export function SystemGraph({ state, compact = false }: SystemGraphProps) {
   return (
     <div className={compact ? "space-y-2" : "space-y-4"}>
       <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
-        Conceptual pipeline · not backend topology
+        Continuous verification & repair plane · MITRE ATT&CK
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {PIPELINE_STAGES.map((stage, i) => {
@@ -63,7 +63,7 @@ export function SystemGraph({ state, compact = false }: SystemGraphProps) {
       </div>
       {active === null && (
         <p className={cn("font-mono text-muted", compact ? "text-[10px]" : "text-xs")}>
-          Idle. Start an audit to activate the pipeline overlay.
+          Idle — start a verification run to activate the pipeline.
         </p>
       )}
     </div>

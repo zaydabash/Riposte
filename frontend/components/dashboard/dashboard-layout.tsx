@@ -11,7 +11,7 @@ import {
   AuditConfigForm,
   SessionPanel,
 } from "@/components/dashboard/control-plane";
-import { FindingsView } from "@/components/dashboard/findings-view";
+import { VerificationConsole } from "@/components/dashboard/verification-console";
 import { SystemGraph } from "@/components/dashboard/system-graph";
 import { IntelligenceLayer } from "@/components/dashboard/intelligence-layer";
 import { formatRelativeTime } from "@/lib/format";
@@ -30,7 +30,7 @@ interface DashboardLayoutProps {
   isSyncing: boolean;
 }
 
-type CenterTab = "findings" | "graph";
+type CenterTab = "console" | "graph";
 
 function useNow(active: boolean): number {
   const [now, setNow] = useState(() => Date.now());
@@ -44,7 +44,7 @@ function useNow(active: boolean): number {
 
 export function DashboardLayout(props: DashboardLayoutProps) {
   const { state, phase, alerts, lastSyncedAt, isSyncing } = props;
-  const [tab, setTab] = useState<CenterTab>("findings");
+  const [tab, setTab] = useState<CenterTab>("console");
   const now = useNow(lastSyncedAt !== null);
   const isActive = phase === "running" || phase === "configuring";
 
@@ -90,7 +90,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
               <div className="flex items-center gap-1">
                 {(
                   [
-                    ["findings", "Live State Projection"],
+                    ["console", "Verification Console"],
                     ["graph", "System Graph"],
                   ] as const
                 ).map(([id, label]) => (
@@ -122,8 +122,8 @@ export function DashboardLayout(props: DashboardLayoutProps) {
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto">
-              {tab === "findings" ? (
-                <FindingsView state={state} isActive={isActive} compact />
+              {tab === "console" ? (
+                <VerificationConsole state={state} isActive={isActive} compact />
               ) : (
                 <SystemGraph state={state} compact />
               )}

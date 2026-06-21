@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api.deps import get_orchestrator
-from src.api.routers import router as audit_router
+from src.api.routers import router as audit_router, techniques_router
 from src.config import get_settings
 from src.core.telemetry import init_telemetry
 from src.services.orchestrator import Orchestrator
@@ -38,11 +40,17 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Riposte — Autonomous Defensive Scaffolding",
-        description="Continuous red-team + remediation pipeline for LLM agents.",
-        version="1.0.0",
+        title="Riposte — Continuous Verification & Repair Plane",
+        description=(
+            "Continuous verification and repair for AI agents and AI-assisted "
+            "software, mapped to MITRE ATT&CK browser-testable controls."
+        ),
+        version="2.0.0",
         lifespan=lifespan,
     )
+    fixtures_dir = Path(__file__).resolve().parent / "scenarios" / "fixtures"
+    if fixtures_dir.is_dir():
+        app.mount("/fixtures", StaticFiles(directory=str(fixtures_dir)), name="fixtures")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -50,10 +58,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(audit_router)
+    app.include_router(techniques_router)
 
     @app.get("/health", tags=["Health"])
     async def health(orchestrator: Orchestrator = Depends(get_orchestrator)) -> dict:
-        return {"status": "ok", "integrations": orchestrator.telemetry_status}
+        return {"status": "ok", "integrations": await orchestrator.integration_status()}
 
     return app
 

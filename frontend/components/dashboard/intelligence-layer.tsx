@@ -109,7 +109,7 @@ export function IntelligenceLayer({
         </div>
         {remediations.length === 0 ? (
           <p className="font-mono text-[10px] leading-snug text-muted">
-            No remediations. Critical findings trigger HITL pull requests.
+            No repair proposals yet. Critical control failures trigger HITL PRs and re-verification.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -124,6 +124,7 @@ export function IntelligenceLayer({
                   </span>
                   <span className="font-mono text-[10px] text-muted">
                     ARiES {formatScore(r.aries_score)}
+                    {r.validation_status ? ` · ${r.validation_status}` : ""}
                   </span>
                 </div>
                 <p className="mt-0.5 truncate font-mono text-[10px] text-muted">

@@ -58,3 +58,10 @@ def test_rejects_non_web_ui_interface(client):
 def test_unknown_audit_returns_404(client):
     resp = client.get("/api/v1/audit/does-not-exist")
     assert resp.status_code == 404
+
+
+def test_list_techniques(client):
+    resp = client.get("/api/v1/techniques")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert any(t["technique_id"] == "T1185" for t in body)
