@@ -11,100 +11,46 @@ import {
   ScrollRevealStagger,
 } from "@/components/ui/scroll-reveal";
 
-const integrationLoops: {
-  title: string;
-  partners: string;
-  description: string;
-  formula: MathFormulaVariant;
-}[] = [
-  {
-    title: "ARiES Verification Score",
-    partners: "MiniMax",
-    description:
-      "Single judges and raw perplexity miss calibrated risk. Riposte computes a composite verification score from behavioral anomaly, evidence leakage, control failure, and policy-compliance judges.",
-    formula: "aries",
-  },
-  {
-    title: "Browser Verification",
-    partners: "Browserbase & Stagehand",
-    description:
-      "ATT&CK-keyed scenarios run against the configured target. Stagehand executes declarative verification steps via structured DOM actions, captures artifact evidence, and never prompt-injects the testing agent.",
-    formula: "tAdv",
-  },
-  {
-    title: "Regression Memory",
-    partners: "Redis & MiniMax",
-    description:
-      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger MiniMax repair proposals and HITL pull requests; post-merge re-verification runs via a repair_validation audit.",
-    formula: "leakage",
-  },
-];
-
-const pillars: {
+const coreEngineComponents: {
   number: string;
   title: string;
-  sponsor: string;
+  subtitle: string;
   formula: MathFormulaVariant;
+  formula2?: MathFormulaVariant;
   description: string;
 }[] = [
   {
     number: "01",
-    title: "Browser Verification",
-    sponsor: "Browserbase & Stagehand",
-    formula: "tAdv",
+    title: "The Fuzzer",
+    subtitle: "Stochastic Token-Swap Optimization",
+    formula: "crossEntropy",
+    formula2: "simulatedAnnealing",
     description:
-      "ATT&CK scenario runner with session reuse, declarative DOM steps, and artifact capture. Rate-limited via semaphores; fail-closed on live verification errors.",
+      "Since Riposte is a Black Box attacker without gradient access, it appends a sequence of random tokens to a malicious prompt. It measures the Cross-Entropy Loss against semantic prototypes via Cosine Similarity. Simulated Annealing uses the Metropolis probability to accept \"worse\" mutations, allowing the fuzzer to explore the search space broadly before freezing into a global minimum.",
   },
   {
     number: "02",
-    title: "Regression Memory",
-    sponsor: "Redis Stack",
-    formula: "redisSearch",
+    title: "ARiES Core Mathematics",
+    subtitle: "Calibrated Risk Evaluation",
+    formula: "aries",
     description:
-      "Binary-safe vector memory for evidence summaries and private corpus embeddings. FT.SEARCH surfaces similar past control failures for continuous verification.",
+      "M (Anomaly): Uses Hotelling's T² + SPE residual to catch out-of-distribution hallucinations. L (Leakage): Uses the Overlap Coefficient for strict lexical grounding, preventing false positives. A (Attack): Uses logarithmic scaling to penalize data dumps heavily while capping the score from blowing up to infinity. J (Judge): Uses an ensemble of MiniMax policy judges with a heuristic circuit breaker.",
   },
   {
     number: "03",
-    title: "Calibrated Evaluator",
-    sponsor: "MiniMax",
-    formula: "aries",
+    title: "Regression Memory",
+    subtitle: "Redis HNSW Vector Database",
+    formula: "redisSearch",
     description:
-      `Verification score combining behavioral anomaly, evidence leakage, control failure, and policy-compliance judges. Critical at ARiES ≥ ${CRITICAL_ARIES_THRESHOLD}.`,
+      "To instantly compare the AI's response against millions of private documents, Redis Stack uses the Hierarchical Navigable Small World (HNSW) algorithm. By traversing a multi-layered vector graph, search complexity drops from O(N) to O(log N), retrieving the closest private documents in milliseconds.",
   },
   {
     number: "04",
-    title: "Reliability Net",
-    sponsor: "Sentry",
-    formula: "trace",
+    title: "Headless Execution & Observability",
+    subtitle: "Browserbase & Stagehand",
+    formula: "tAdv",
     description:
-      "Sentry error instrumentation across the pipeline. Prompts and PII are never logged: send_default_pii=False, include_prompts=False.",
-  },
-  {
-    number: "05",
-    title: "Repair Plane",
-    sponsor: "MiniMax & GitHub",
-    formula: "prFix",
-    description:
-      "Repair worker proposes defensive patches via MiniMax and opens HITL pull requests. Re-verification runs the same ATT&CK scenarios before merge.",
-  },
-];
-
-const pipelineSteps = [
-  {
-    label: "Context Generation",
-    detail: "Baseline exploration payload queued via FastAPI → attack_queue",
-  },
-  {
-    label: "Attack Execution",
-    detail: "Stagehand injects T_adv; offensive workers run concurrently",
-  },
-  {
-    label: "Semantic Evaluation",
-    detail: "eval_service computes ARiES from artifact evidence and technique rubrics",
-  },
-  {
-    label: "HITL Remediation",
-    detail: "Critical findings trigger MiniMax patch + HITL PR, no auto-merge",
+      "Riposte executes dynamic MITRE attack scenarios using Stagehand, which translates declarative natural language steps into robust Playwright commands. After execution, the Verification Rubric analyzes the captured DOM and network logs to ensure malicious scripts or unauthorized APIs were successfully blocked.",
   },
 ];
 
@@ -121,13 +67,13 @@ export function ArchitectureSection() {
               Architecture
             </p>
             <h2 className="mt-2 text-3xl tracking-tight text-foreground md:text-4xl">
-              Five pillars. One loop.
+              The Core Engine.
             </h2>
             <p className="mt-4 font-mono text-sm text-accent">
               Riposte: Autonomous Defensive Scaffolding
             </p>
             <p className="mt-2 max-w-3xl text-lg text-foreground/90">
-              A continuous security pipeline for LLM agents
+              A continuous security pipeline for LLM agents, built on rigorous mathematical models.
             </p>
           </div>
         </ScrollReveal>
@@ -198,106 +144,38 @@ export function ArchitectureSection() {
         <div>
           <ScrollReveal>
             <h3 className="mb-8 border-l-2 border-accent pl-6 font-mono text-xs tracking-widest text-accent uppercase">
-              Symbiotic Integration Loops
-            </h3>
-          </ScrollReveal>
-          <ScrollRevealStagger className="grid gap-4 md:grid-cols-3">
-            {integrationLoops.map((loop) => (
-              <ScrollRevealItem key={loop.title}>
-                <GlassPanel className={`h-full p-6 ${panelHoverClass}`}>
-                  <p className="font-mono text-[10px] tracking-wider text-muted uppercase">
-                    {loop.partners}
-                  </p>
-                  <h4 className="mt-2 text-lg text-foreground">{loop.title}</h4>
-                  <div className="mt-4 border-l border-accent/20 pl-4">
-                    <MathFormula variant={loop.formula} />
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-muted">
-                    {loop.description}
-                  </p>
-                </GlassPanel>
-              </ScrollRevealItem>
-            ))}
-          </ScrollRevealStagger>
-        </div>
-
-        <div>
-          <ScrollReveal>
-            <h3 className="mb-8 border-l-2 border-accent pl-6 font-mono text-xs tracking-widest text-accent uppercase">
-              Five Pillars
+              Mathematical &amp; Architectural Breakdown
             </h3>
           </ScrollReveal>
           <ScrollRevealStagger
-            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-4 md:grid-cols-2"
             stagger={0.06}
           >
-            {pillars.map((pillar) => (
-              <ScrollRevealItem key={pillar.number}>
-                <GlassPanel className={`group h-full p-6 ${panelHoverClass}`}>
+            {coreEngineComponents.map((component) => (
+              <ScrollRevealItem key={component.number}>
+                <GlassPanel className={`group h-full p-6 md:p-8 ${panelHoverClass}`}>
                   <div className="mb-4 flex items-start justify-between">
                     <span className="font-mono text-xs text-accent">
-                      {pillar.number}
+                      {component.number}
                     </span>
                     <span className="font-mono text-[10px] tracking-wider text-muted uppercase">
-                      {pillar.sponsor}
+                      {component.subtitle}
                     </span>
                   </div>
-                  <h4 className="text-lg text-foreground transition-colors group-hover:text-accent">
-                    {pillar.title}
+                  <h4 className="text-xl text-foreground transition-colors group-hover:text-accent">
+                    {component.title}
                   </h4>
-                  <div className="mt-4 border-l border-accent/20 pl-4">
-                    <MathFormula variant={pillar.formula} />
+                  <div className="mt-6 space-y-4 border-l border-accent/20 pl-4">
+                    <MathFormula variant={component.formula} />
+                    {component.formula2 && <MathFormula variant={component.formula2} />}
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-muted">
-                    {pillar.description}
+                  <p className="mt-6 text-sm leading-relaxed text-muted md:text-base">
+                    {component.description}
                   </p>
                 </GlassPanel>
               </ScrollRevealItem>
             ))}
           </ScrollRevealStagger>
-        </div>
-
-        <div>
-          <ScrollReveal>
-            <h3 className="mb-8 border-l-2 border-accent pl-6 font-mono text-xs tracking-widest text-accent uppercase">
-              Asynchronous Pipeline
-            </h3>
-          </ScrollReveal>
-          <ScrollReveal delay={0.06}>
-            <GlassPanel className="p-8 md:p-12">
-              <ScrollRevealStagger
-                className="grid gap-8 md:grid-cols-2 lg:grid-cols-4"
-                stagger={0.07}
-              >
-                {pipelineSteps.map((step, index) => (
-                  <ScrollRevealItem key={step.label}>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center border border-accent/30 font-mono text-xs text-accent">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="text-foreground">{step.label}</span>
-                      </div>
-                      <p className="pl-11 font-mono text-xs leading-relaxed text-muted">
-                        {step.detail}
-                      </p>
-                    </div>
-                  </ScrollRevealItem>
-                ))}
-              </ScrollRevealStagger>
-              <ScrollReveal delay={0.2}>
-                <div className="mt-10 border-t border-accent/10 pt-8">
-                  <div className="relative h-1 w-full bg-accent/10">
-                    <div className="absolute left-0 top-0 h-full w-full bg-accent/80" />
-                  </div>
-                  <p className="mt-4 font-mono text-xs text-muted">
-                    Phases 1 to 3 concurrent · eval_queue → remediation_queue
-                    on critical ARiES
-                  </p>
-                </div>
-              </ScrollReveal>
-            </GlassPanel>
-          </ScrollReveal>
         </div>
       </div>
     </section>

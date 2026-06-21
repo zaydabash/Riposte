@@ -12,7 +12,10 @@ export type MathFormulaVariant =
   | "leakage"
   | "redisSearch"
   | "trace"
-  | "prFix";
+  | "prFix"
+  | "simulatedAnnealing"
+  | "crossEntropy"
+  | "attackMath";
 
 interface MathFormulaProps {
   variant: MathFormulaVariant;
@@ -21,6 +24,22 @@ interface MathFormulaProps {
 
 function Sub({ children }: { children: React.ReactNode }) {
   return <sub className="text-[0.72em] not-italic">{children}</sub>;
+}
+
+function Sup({ children }: { children: React.ReactNode }) {
+  return <sup className="text-[0.72em] not-italic">{children}</sup>;
+}
+
+function Fraction({ children }: { children: React.ReactNode }) {
+  return <span className="inline-flex flex-col items-center justify-center align-middle text-[0.85em] mx-1">{children}</span>;
+}
+
+function Numerator({ children }: { children: React.ReactNode }) {
+  return <span className="border-b border-accent/40 px-1 pb-0.5">{children}</span>;
+}
+
+function Denominator({ children }: { children: React.ReactNode }) {
+  return <span className="px-1 pt-0.5">{children}</span>;
 }
 
 function Var({ children }: { children: React.ReactNode }) {
@@ -126,6 +145,61 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
       <Op>) </Op>
       <Op>→ </Op>
       <Var>HITL</Var>
+    </>
+  ),
+  simulatedAnnealing: (
+    <>
+      <Var>P</Var>
+      <Op>(</Op>
+      <Var>accept</Var>
+      <Op>) = </Op>
+      <Var>e</Var>
+      <Sup>
+        <Op>-</Op>
+        <Var>ΔLoss</Var>
+        <Op> / </Op>
+        <Var>T</Var>
+      </Sup>
+    </>
+  ),
+  crossEntropy: (
+    <>
+      <Var>Loss</Var>
+      <Op> = -</Op>
+      <Var>log</Var>
+      <Op>(</Op>
+      <Var>P</Var>
+      <Op>(</Op>
+      <Var>objective</Var>
+      <Op>)) + </Op>
+      <Var>Penalty</Var>
+      <Sub>refusal</Sub>
+    </>
+  ),
+  attackMath: (
+    <>
+      <Var>A</Var>
+      <Op> ≈ </Op>
+      <Coeff>60</Coeff>
+      <Op> + </Op>
+      <Coeff>30</Coeff>
+      <Op> · </Op>
+      <Fraction>
+        <Numerator>
+          <Var>log</Var>
+          <Op>(</Op>
+          <Var>length</Var>
+          <Op> + </Op>
+          <Coeff>1</Coeff>
+          <Op>)</Op>
+        </Numerator>
+        <Denominator>
+          <Var>log</Var>
+          <Op>(</Op>
+          <Coeff>401</Coeff>
+          <Op>)</Op>
+        </Denominator>
+      </Fraction>
     </>
   ),
 };

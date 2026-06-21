@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     # --- Pipeline knobs ---
     max_concurrent_sessions: int = Field(default=15, alias="MAX_CONCURRENT_SESSIONS")
     fuzzer_workers: int = Field(default=2, alias="FUZZER_WORKERS")
-    offensive_workers: int = Field(default=3, alias="OFFENSIVE_WORKERS")
+    offensive_workers: int = Field(default=15, alias="OFFENSIVE_WORKERS")
     eval_workers: int = Field(default=2, alias="EVAL_WORKERS")
     remediation_workers: int = Field(default=1, alias="REMEDIATION_WORKERS")
     default_max_techniques: int = Field(default=10, alias="DEFAULT_MAX_TECHNIQUES")
