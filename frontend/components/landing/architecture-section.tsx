@@ -178,7 +178,6 @@ export function ArchitectureSection() {
 
           <ScrollReveal delay={0.1}>
             <p className="max-w-4xl px-1 text-sm leading-relaxed text-muted">
-              Inspired by:{" "}
               <em>
                 Mapping AI-Enabled Cyber Threats: LLM ATT&amp;CK Navigator
               </em>{" "}
