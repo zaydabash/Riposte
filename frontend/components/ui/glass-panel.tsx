@@ -38,7 +38,7 @@ export function GlassPanel({
         style={{ backdropFilter: 'url("#container-glass")' }}
         aria-hidden="true"
       />
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 flex h-full min-h-0 flex-col">{children}</div>
       <GlassFilter />
     </Component>
   );

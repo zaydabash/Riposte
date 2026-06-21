@@ -94,51 +94,55 @@ export function SessionPanel({
   compact = false,
 }: ControlPlaneSharedProps) {
   return (
-    <GlassPanel className={cn("flex h-full flex-col", compact ? "p-4" : "p-6")}>
-      <div className="flex items-center justify-between">
+    <GlassPanel
+      className={cn("flex h-full min-h-0 flex-col", compact ? "p-4" : "p-6")}
+    >
+      <div className="flex shrink-0 items-center justify-between">
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
           Session
         </p>
         <StatusPill phase={phase} state={state} />
       </div>
-      <nav className={cn("space-y-0.5", compact ? "mt-2" : "mt-4")}>
-        {NAV.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => scrollTo(id)}
-            className={cn(
-              "flex w-full items-center gap-2 border border-transparent text-left font-mono text-muted transition-colors hover:border-white/10 hover:text-foreground",
-              compact ? "px-2 py-1 text-[11px]" : "px-3 py-2 text-xs",
-            )}
-          >
-            <Icon size={compact ? 12 : 14} /> {label}
-          </button>
-        ))}
-      </nav>
-      {health && !compact && (
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <p className="mb-2 flex items-center gap-2 font-mono text-[10px] tracking-widest text-muted uppercase">
-            <Database size={12} /> Integrations
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {Object.entries(health.integrations).map(([name, ok]) => (
-              <span
-                key={name}
-                className="flex items-center gap-1.5 font-mono text-[10px] text-muted"
-              >
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <nav className={cn("space-y-0.5", compact ? "mt-2" : "mt-4")}>
+          {NAV.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => scrollTo(id)}
+              className={cn(
+                "flex w-full items-center gap-2 border border-transparent text-left font-mono text-muted transition-colors hover:border-white/10 hover:text-foreground",
+                compact ? "px-2 py-1 text-[11px]" : "px-3 py-2 text-xs",
+              )}
+            >
+              <Icon size={compact ? 12 : 14} /> {label}
+            </button>
+          ))}
+        </nav>
+        {health && !compact && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p className="mb-2 flex items-center gap-2 font-mono text-[10px] tracking-widest text-muted uppercase">
+              <Database size={12} /> Integrations
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {Object.entries(health.integrations).map(([name, ok]) => (
                 <span
-                  className={cn(
-                    "inline-block h-1.5 w-1.5",
-                    ok ? "bg-[var(--status-safe)]" : "bg-white/20",
-                  )}
-                />
-                {name.replace(/_/g, " ")}
-              </span>
-            ))}
+                  key={name}
+                  className="flex items-center gap-1.5 font-mono text-[10px] text-muted"
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-1.5 w-1.5",
+                      ok ? "bg-[var(--status-safe)]" : "bg-white/20",
+                    )}
+                  />
+                  {name.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </GlassPanel>
   );
 }
@@ -166,11 +170,14 @@ export function AuditConfigForm({
   return (
     <GlassPanel
       id="section-config"
-      className={cn("h-full", compact ? "p-4" : "p-6")}
+      className={cn(
+        "flex h-full min-h-0 flex-col",
+        compact ? "p-4" : "p-6",
+      )}
     >
       <div
         className={cn(
-          "flex flex-wrap items-end justify-between gap-3 border-l-2 border-accent/40 pl-3",
+          "flex shrink-0 flex-wrap items-end justify-between gap-3 border-l-2 border-accent/40 pl-3",
           compact ? "mb-3" : "mb-5 pl-4",
         )}
       >
@@ -196,130 +203,132 @@ export function AuditConfigForm({
         </div>
       </div>
 
-      <div className={cn("grid lg:grid-cols-3", compact ? "gap-2.5" : "gap-4")}>
-        <div className="lg:col-span-3">
-          <label htmlFor="api-url" className={labelClass}>
-            API URL
-          </label>
-          <input
-            id="api-url"
-            type="url"
-            value={config.apiBaseUrl}
-            onChange={(e) => update("apiBaseUrl", e.target.value)}
-            disabled={isActive}
-            className={inputClass}
-            placeholder={defaultApiBaseUrl()}
-          />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className={cn("grid lg:grid-cols-3", compact ? "gap-2.5" : "gap-4")}>
+          <div className="lg:col-span-3">
+            <label htmlFor="api-url" className={labelClass}>
+              API URL
+            </label>
+            <input
+              id="api-url"
+              type="url"
+              value={config.apiBaseUrl}
+              onChange={(e) => update("apiBaseUrl", e.target.value)}
+              disabled={isActive}
+              className={inputClass}
+              placeholder={defaultApiBaseUrl()}
+            />
+          </div>
+          <div className="lg:col-span-3">
+            <label htmlFor="private-corpus" className={labelClass}>
+              Private Corpus
+            </label>
+            <textarea
+              id="private-corpus"
+              rows={compact ? 3 : 4}
+              value={config.privateCorpusText}
+              onChange={(e) => update("privateCorpusText", e.target.value)}
+              disabled={isActive}
+              className={cn(inputClass, "resize-y")}
+              placeholder="One proprietary document per line (data the target must not leak)"
+            />
+          </div>
+          <div className="lg:col-span-3">
+            <label htmlFor="benign-baseline" className={labelClass}>
+              Benign Baseline
+            </label>
+            <textarea
+              id="benign-baseline"
+              rows={compact ? 3 : 4}
+              value={config.benignBaselineText}
+              onChange={(e) => update("benignBaselineText", e.target.value)}
+              disabled={isActive}
+              className={cn(inputClass, "resize-y")}
+              placeholder="One normal on-topic response per line (at least two lines)"
+            />
+          </div>
+          <div>
+            <label htmlFor="target-name" className={labelClass}>
+              Target Name
+            </label>
+            <input
+              id="target-name"
+              type="text"
+              value={config.targetName}
+              onChange={(e) => update("targetName", e.target.value)}
+              disabled={isActive}
+              className={inputClass}
+              placeholder="Demo Support Bot"
+            />
+          </div>
+          <div>
+            <label htmlFor="target-endpoint" className={labelClass}>
+              Target Endpoint
+            </label>
+            <input
+              id="target-endpoint"
+              type="url"
+              value={config.targetEndpoint}
+              onChange={(e) => update("targetEndpoint", e.target.value)}
+              disabled={isActive}
+              className={inputClass}
+              placeholder="https://target-agent.com"
+            />
+          </div>
+          <div>
+            <label htmlFor="source-repo" className={labelClass}>
+              Source Repository
+            </label>
+            <input
+              id="source-repo"
+              type="url"
+              value={config.sourceRepository}
+              onChange={(e) => update("sourceRepository", e.target.value)}
+              disabled={isActive}
+              className={inputClass}
+              placeholder="https://github.com/target/bot"
+            />
+          </div>
+          <div>
+            <label htmlFor="max-payloads" className={labelClass}>
+              Payload Budget
+            </label>
+            <input
+              id="max-payloads"
+              type="number"
+              min={1}
+              max={MAX_PAYLOADS_LIMIT}
+              value={config.maxPayloads}
+              onChange={(e) => update("maxPayloads", Number(e.target.value))}
+              disabled={isActive}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="poll-interval" className={labelClass}>
+              Poll (ms)
+            </label>
+            <input
+              id="poll-interval"
+              type="number"
+              min={MIN_POLLING_INTERVAL_MS}
+              step={MIN_POLLING_INTERVAL_MS}
+              value={config.pollingIntervalMs}
+              onChange={(e) =>
+                update("pollingIntervalMs", Number(e.target.value))
+              }
+              disabled={isActive}
+              className={inputClass}
+            />
+          </div>
         </div>
-        <div className="lg:col-span-3">
-          <label htmlFor="private-corpus" className={labelClass}>
-            Private Corpus
-          </label>
-          <textarea
-            id="private-corpus"
-            rows={compact ? 3 : 4}
-            value={config.privateCorpusText}
-            onChange={(e) => update("privateCorpusText", e.target.value)}
-            disabled={isActive}
-            className={cn(inputClass, "resize-y")}
-            placeholder="One proprietary document per line (data the target must not leak)"
-          />
-        </div>
-        <div className="lg:col-span-3">
-          <label htmlFor="benign-baseline" className={labelClass}>
-            Benign Baseline
-          </label>
-          <textarea
-            id="benign-baseline"
-            rows={compact ? 3 : 4}
-            value={config.benignBaselineText}
-            onChange={(e) => update("benignBaselineText", e.target.value)}
-            disabled={isActive}
-            className={cn(inputClass, "resize-y")}
-            placeholder="One normal on-topic response per line (at least two lines)"
-          />
-        </div>
-        <div>
-          <label htmlFor="target-name" className={labelClass}>
-            Target Name
-          </label>
-          <input
-            id="target-name"
-            type="text"
-            value={config.targetName}
-            onChange={(e) => update("targetName", e.target.value)}
-            disabled={isActive}
-            className={inputClass}
-            placeholder="Demo Support Bot"
-          />
-        </div>
-        <div>
-          <label htmlFor="target-endpoint" className={labelClass}>
-            Target Endpoint
-          </label>
-          <input
-            id="target-endpoint"
-            type="url"
-            value={config.targetEndpoint}
-            onChange={(e) => update("targetEndpoint", e.target.value)}
-            disabled={isActive}
-            className={inputClass}
-            placeholder="https://target-agent.com"
-          />
-        </div>
-        <div>
-          <label htmlFor="source-repo" className={labelClass}>
-            Source Repository
-          </label>
-          <input
-            id="source-repo"
-            type="url"
-            value={config.sourceRepository}
-            onChange={(e) => update("sourceRepository", e.target.value)}
-            disabled={isActive}
-            className={inputClass}
-            placeholder="https://github.com/target/bot"
-          />
-        </div>
-        <div>
-          <label htmlFor="max-payloads" className={labelClass}>
-            Payload Budget
-          </label>
-          <input
-            id="max-payloads"
-            type="number"
-            min={1}
-            max={MAX_PAYLOADS_LIMIT}
-            value={config.maxPayloads}
-            onChange={(e) => update("maxPayloads", Number(e.target.value))}
-            disabled={isActive}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label htmlFor="poll-interval" className={labelClass}>
-            Poll (ms)
-          </label>
-          <input
-            id="poll-interval"
-            type="number"
-            min={MIN_POLLING_INTERVAL_MS}
-            step={MIN_POLLING_INTERVAL_MS}
-            value={config.pollingIntervalMs}
-            onChange={(e) =>
-              update("pollingIntervalMs", Number(e.target.value))
-            }
-            disabled={isActive}
-            className={inputClass}
-          />
-        </div>
-      </div>
 
-      {error && (
-        <p className="mt-2 border border-[var(--status-vulnerable)]/40 bg-[var(--status-vulnerable)]/10 px-2 py-1.5 font-mono text-[10px] text-[var(--status-vulnerable)]">
-          {error.message}
-        </p>
-      )}
+        {error && (
+          <p className="mt-2 border border-[var(--status-vulnerable)]/40 bg-[var(--status-vulnerable)]/10 px-2 py-1.5 font-mono text-[10px] text-[var(--status-vulnerable)]">
+            {error.message}
+          </p>
+        )}
+      </div>
     </GlassPanel>
   );
 }

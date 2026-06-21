@@ -70,7 +70,11 @@ export function IntelligenceLayer({
       <GlassPanel
         className={cn(
           panelClass,
-          compact && "flex min-h-0 flex-1 flex-col overflow-hidden",
+          // min-h-16 is a real flex-basis floor: even when sibling panels
+          // (Global ARiES, Remediation Queue) are shrink-0 and claim most of
+          // the row's capped height, this panel keeps room for ~2-3 visible
+          // rows instead of being squeezed to 0px by the flex algorithm.
+          compact && "flex min-h-16 flex-1 flex-col overflow-hidden",
         )}
       >
         <div

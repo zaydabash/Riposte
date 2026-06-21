@@ -241,6 +241,10 @@ export interface Alert {
   readonly ariesScore?: number;
 }
 
+/** Hard cap on stored alerts per audit so a long-running session can't grow the
+ * feed (and its DOM list) without bound. Oldest entries are dropped first. */
+const MAX_ALERT_FEED_SIZE = 200;
+
 /**
  * Advance the alert feed for one poll cycle and return the full deduped feed.
  *
@@ -261,6 +265,10 @@ export function deriveAlerts(
     if (cache.emitted.has(alert.id)) return;
     cache.emitted.add(alert.id);
     cache.feed.push(alert);
+    if (cache.feed.length > MAX_ALERT_FEED_SIZE) {
+      const dropped = cache.feed.shift();
+      if (dropped) cache.emitted.delete(dropped.id);
+    }
   };
 
   // A. Diff-based, one-shot ------------------------------------------------

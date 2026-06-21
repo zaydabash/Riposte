@@ -50,7 +50,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[1480px] flex-1 flex-col px-6 pb-4 md:px-10">
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[auto_minmax(0,1fr)] lg:items-stretch">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[minmax(0,clamp(280px,34vh,440px))_minmax(0,1fr)] lg:items-stretch">
         <aside className="h-full lg:col-span-3 lg:row-start-1">
           <SessionPanel
             phase={phase}
@@ -74,7 +74,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
           />
         </section>
 
-        <aside className="flex h-full min-h-0 flex-col lg:col-span-3 lg:col-start-10 lg:row-start-1">
+        <aside className="flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain lg:col-span-3 lg:col-start-10 lg:row-start-1">
           <div id="section-aries" />
           <div id="section-alerts" />
           <div id="section-remediation" />
