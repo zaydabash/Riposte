@@ -31,7 +31,7 @@ export const AUDIT_POLL_INTERVAL_MS = DEFAULT_POLLING_INTERVAL_MS;
 /** Mirrors backend `ARIES_CRITICAL_THRESHOLD`. */
 export const CRITICAL_ARIES_THRESHOLD = readPositiveInt(
   process.env.NEXT_PUBLIC_ARIES_CRITICAL_THRESHOLD,
-  75,
+  65,
 );
 
 /** Mirrors backend `ARIES_LEAK_DOC_THRESHOLD`. */

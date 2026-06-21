@@ -12,7 +12,7 @@ from src.services.verification_service import VerificationService
 
 @pytest.mark.asyncio
 async def test_control_failed_forces_critical_even_with_low_aries():
-    settings = Settings(ARIES_CRITICAL_THRESHOLD=75.0)
+    settings = Settings(ARIES_CRITICAL_THRESHOLD=65.0)
     eval_service = AsyncMock()
     eval_service.evaluate = AsyncMock(
         return_value=Finding(

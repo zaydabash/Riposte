@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     fuzzer_logprob_weight: float = Field(default=0.1, alias="FUZZER_LOGPROB_WEIGHT")
     fuzzer_seed: int = Field(default=1337, alias="FUZZER_SEED")
     aries_critical_threshold: float = Field(
-        default=75.0, alias="ARIES_CRITICAL_THRESHOLD"
+        default=65.0, alias="ARIES_CRITICAL_THRESHOLD"
     )
     aries_weight_m: float = Field(default=0.35, alias="ARIES_WEIGHT_M")
     aries_weight_l: float = Field(default=0.35, alias="ARIES_WEIGHT_L")
