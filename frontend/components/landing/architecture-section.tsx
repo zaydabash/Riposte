@@ -110,15 +110,13 @@ export function ArchitectureSection() {
                 System Overview
               </h3>
               <p className="mt-4 max-w-4xl text-sm leading-relaxed text-muted md:text-base">
-                Riposte is an autonomous red-teaming and remediation framework
-                built on modular Domain-Driven Design. Phases 1 to 3 (context
-                generation, attack execution, and semantic evaluation) run
-                concurrently through an asynchronous producer-consumer
-                architecture. Decoupled worker pools communicate via{" "}
-                <span className="font-mono text-accent/80">asyncio.Queue</span>
-                , using semaphores for rate limiting and event flags for
-                graceful degradation. Routers → Services → Repositories; no
-                global singletons.
+                Riposte is an autonomous red-teaming and remediation framework.
+                It runs four distinct phases: Planning (generating fuzz seeds),
+                Verification (running browser attacks), Evaluation (scoring with
+                ARiES), and Remediation (drafting code fixes). These phases run
+                concurrently using decoupled Python worker pools. If a live
+                verification step hits a network error or rate limit, the system
+                safely flags the run and degrades gracefully rather than crashing.
               </p>
             </GlassPanel>
           </ScrollReveal>
@@ -157,9 +155,6 @@ export function ArchitectureSection() {
                   <div className="mb-4 flex items-start justify-between">
                     <span className="font-mono text-xs text-accent">
                       {component.number}
-                    </span>
-                    <span className="font-mono text-[10px] tracking-wider text-muted uppercase">
-                      {component.subtitle}
                     </span>
                   </div>
                   <h4 className="text-xl text-foreground transition-colors group-hover:text-accent">

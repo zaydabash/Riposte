@@ -147,28 +147,7 @@ export function HowItWorksSection() {
           })}
         </ScrollRevealStagger>
 
-        <ScrollReveal delay={0.05}>
-          <GlassPanel className="p-6 panel-hover-glow md:p-8">
-            <p className="font-mono text-[10px] tracking-widest text-accent uppercase">
-              Global ARiES
-            </p>
-            <h3 className="mt-2 text-lg text-foreground md:text-xl">
-              The worst attack wins, not the average
-            </h3>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted md:text-base">
-              Global ARiES is the maximum score recorded across every attack in
-              an audit — not the mean. If Riposte runs 100 scenarios and your
-              app defends 99 of them but fails critically on just one, the
-              Global ARiES for the entire run is that one critical score.
-            </p>
-            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground/70 italic">
-              An application is only as strong as its weakest link — averaging
-              would let one critical leak hide behind ninety-nine successful
-              defenses. Taking the maximum forces every result toward the
-              worst case that was actually found.
-            </p>
-          </GlassPanel>
-        </ScrollReveal>
+
       </div>
     </section>
   );

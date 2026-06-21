@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Riposte",
   description:
-    "An autonomous security pipeline for LLM agents. Fuzz your models, evaluate vulnerabilities mathematically with ARiES, and automatically generate patches.",
+    "An autonomous security pipeline for LLM agents. Fuzz your models, verify attacks against real MITRE ATT&CK scenarios, evaluate vulnerabilities mathematically with ARiES, and automatically generate patches.",
 };
 
 export default function RootLayout({

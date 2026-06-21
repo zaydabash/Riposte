@@ -151,11 +151,11 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
     <>
       <Var>P</Var>
       <Op>{"("}</Op>
-      <Var>accept</Var>
+      <span className="not-italic">accept</span>
       <Op>{") = "}</Op>
       <Var>e</Var>
       <Sup>
-        <Op>{"-"}</Op>
+        <span className="not-italic">{"-"}</span>
         <Var>ΔLoss</Var>
         <Op>{" / "}</Op>
         <Var>T</Var>
@@ -166,14 +166,14 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
     <>
       <Var>Loss</Var>
       <Op>{" = -"}</Op>
-      <Var>log</Var>
+      <span className="not-italic">log</span>
       <Op>{"("}</Op>
       <Var>P</Var>
       <Op>{"("}</Op>
-      <Var>objective</Var>
+      <span className="not-italic">objective</span>
       <Op>{")) + "}</Op>
       <Var>Penalty</Var>
-      <Sub>refusal</Sub>
+      <Sub><span className="not-italic">refusal</span></Sub>
     </>
   ),
   attackMath: (
@@ -186,15 +186,15 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
       <Op> · </Op>
       <Fraction>
         <Numerator>
-          <Var>log</Var>
+          <span className="not-italic">log</span>
           <Op>(</Op>
-          <Var>length</Var>
+          <span className="not-italic">length</span>
           <Op> + </Op>
           <Coeff>1</Coeff>
           <Op>)</Op>
         </Numerator>
         <Denominator>
-          <Var>log</Var>
+          <span className="not-italic">log</span>
           <Op>(</Op>
           <Coeff>401</Coeff>
           <Op>)</Op>

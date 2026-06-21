@@ -36,7 +36,8 @@ export function HeroSection() {
 
           <p className="animate-fade-in-up animation-delay-600 mx-auto max-w-3xl text-lg leading-relaxed text-foreground/80 md:text-xl">
             An autonomous security pipeline for LLM agents. Fuzz your models,
-            evaluate vulnerabilities mathematically with ARiES, and automatically
+            verify attacks against real MITRE ATT&CK scenarios, evaluate
+            vulnerabilities mathematically with ARiES, and automatically
             generate patches to fix them.
           </p>
 
@@ -45,7 +46,7 @@ export function HeroSection() {
               <LiquidButton size="xl">Launch Console</LiquidButton>
             </Link>
             <LiquidButton size="xl" onClick={scrollToPillars}>
-              View Architecture
+              Read more
             </LiquidButton>
           </div>
         </div>
