@@ -1,0 +1,10 @@
+---
+description: Guidelines for Redis Stack, Asyncio Queues, and Concurrency
+globs: backend/src/repositories/*.py, backend/src/workers/*.py
+alwaysApply: false
+---
+# Asynchronous Processing Rules
+1. **Redis Binary Safety:** Always initialize `redis.asyncio` with `decode_responses=False` to prevent binary vector corruption. Encode vectors as little-endian FLOAT32 bytes.
+2. **RediSearch Syntax:** `FT.SEARCH` queries must explicitly include `RETURN`, `SORTBY`, and `LIMIT`, and pass the query vector via `PARAMS ... DIALECT 2`.
+3. **Worker Safety:** `while` loops must use an `asyncio.Event` for graceful shutdown and honor `None` poison pills. All external I/O is guarded by an `asyncio.Semaphore` and `tenacity` retries.
+4. **No blocking calls:** Never call blocking I/O inside a coroutine; use `redis.asyncio` and `httpx.AsyncClient`. The math core (`embed`, baseline) is CPU-only and synchronous by design.

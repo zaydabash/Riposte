@@ -1,0 +1,11 @@
+---
+description: Enforces FastAPI strict 3-layer architecture and Dependency Injection
+globs: backend/src/**/*.py
+alwaysApply: true
+---
+# FastAPI Production Architecture Rules
+1. **No Global Singletons:** Database clients and API clients MUST be provided via dependency injection (e.g. `Depends(get_orchestrator)` or injected factories). The orchestrator lives on `app.state`, not as a module-level global.
+2. **Repositories are Pure:** Repositories only execute I/O. They parse external data and return strictly typed Pydantic models or domain primitives — never raw RediSearch/DB arrays.
+3. **Security First:** Never log prompts or secrets. Hardcode zero secrets; load via `Settings`. Telemetry sets `send_default_pii=False` and `include_prompts=False`.
+4. **Remediation HITL:** Any Claude Code remediation MUST generate a pull request designated for Human-in-the-Loop approval. Automatic deployment/merge of AI-written code is forbidden.
+5. **Graceful Degradation:** Every external integration (MiniMax, Browserbase, Redis, Arize, Sentry, Claude Code) must degrade to a safe fallback when unconfigured or unreachable, so the pipeline always runs.
