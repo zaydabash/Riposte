@@ -23,11 +23,10 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # --- Anthropic (auto-remediation) ---
+    # --- Anthropic (Stagehand browser verification only) ---
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
-    claude_model_id: str = Field(default="claude-3-opus-20240229", alias="CLAUDE_MODEL_ID")
 
-    # --- MiniMax (fuzzer + ensemble judge) ---
+    # --- MiniMax (fuzzer + ensemble judge + remediation patches) ---
     minimax_api_key: str | None = Field(default=None, alias="MINIMAX_API_KEY")
     minimax_base_url: str = Field(
         default="https://api.tokenrouter.com/v1", alias="MINIMAX_BASE_URL"
@@ -109,10 +108,10 @@ class Settings(BaseSettings):
     max_error_detail_chars: int = Field(default=500, alias="MAX_ERROR_DETAIL_CHARS")
 
     # --- HTTP / integration timeouts ---
-    anthropic_http_timeout: float = Field(default=60.0, alias="ANTHROPIC_HTTP_TIMEOUT")
-    claude_max_tokens: int = Field(default=4000, alias="CLAUDE_MAX_TOKENS")
-    claude_temperature: float = Field(default=0.2, alias="CLAUDE_TEMPERATURE")
     minimax_http_timeout: float = Field(default=20.0, alias="MINIMAX_HTTP_TIMEOUT")
+    minimax_remediation_timeout: float = Field(
+        default=120.0, alias="MINIMAX_REMEDIATION_TIMEOUT"
+    )
     redis_socket_timeout: float = Field(default=3.0, alias="REDIS_SOCKET_TIMEOUT")
     github_http_timeout: float = Field(default=30.0, alias="GITHUB_HTTP_TIMEOUT")
     worker_task_timeout: float = Field(default=300.0, alias="WORKER_TASK_TIMEOUT")
@@ -146,6 +145,11 @@ class Settings(BaseSettings):
     @property
     def minimax_enabled(self) -> bool:
         return bool(self.minimax_api_key)
+
+    @property
+    def remediation_live(self) -> bool:
+        """True when MiniMax patch generation and GitHub PRs can run."""
+        return self.minimax_enabled and bool(self.github_token)
 
 
 @lru_cache(maxsize=1)

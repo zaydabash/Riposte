@@ -1,8 +1,7 @@
 """MiniMax integration: client factory, JSON extraction, and judge schema.
 
 MiniMax-M3 is reached through its OpenAI-compatible endpoint and powers the
-Phase-3 ensemble LLM-judge. Payload generation lives in
-:mod:`src.services.fuzzer_service` (black-box token-level optimization), not here.
+Phase-3 ensemble LLM-judge and Phase-4 remediation patch generation.
 """
 
 from __future__ import annotations
@@ -17,6 +16,11 @@ from src.config import Settings
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
+def strip_thinking(content: str | None) -> str:
+    """Remove MiniMax reasoning blocks from a model reply."""
+    return _THINK_RE.sub("", content or "").strip()
+
+
 def extract_json(content: str | None) -> str:
     """Extract a JSON object from a model reply.
 
@@ -24,7 +28,7 @@ def extract_json(content: str | None) -> str:
     even in JSON mode, so a naive ``json.loads`` fails. This strips the reasoning
     block and slices out the outermost ``{...}`` object.
     """
-    cleaned = _THINK_RE.sub("", content or "").strip()
+    cleaned = strip_thinking(content)
     start, end = cleaned.find("{"), cleaned.rfind("}")
     if start != -1 and end > start:
         return cleaned[start : end + 1]

@@ -257,7 +257,7 @@ class Finding(BaseModel):
 
 
 class RemediationTask(BaseModel):
-    """A critical finding handed off to Claude Code for a HITL patch."""
+    """A critical finding handed off to MiniMax for a HITL patch."""
 
     audit_id: str
     repo_url: str
@@ -270,7 +270,7 @@ class RemediationTask(BaseModel):
 
 
 class RemediationResult(BaseModel):
-    """Outcome of a Claude Code remediation run."""
+    """Outcome of a MiniMax remediation run."""
 
     audit_id: str
     repo_url: str

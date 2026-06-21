@@ -19,6 +19,7 @@ import {
   sessionStepProgress,
   sortVerificationSessions,
 } from "@/lib/audit-selectors";
+import { getMitreUrl } from "@/lib/format";
 
 interface VerificationConsoleProps {
   state: RiposteAuditState | null;
@@ -82,9 +83,27 @@ const GRID_BORDER: Record<VerificationSession["status"], string> = {
 function controlLabel(session: VerificationSession): string | null {
   if (session.status === "queued" || session.status === "running") return null;
   if (!session.verification_status) return "Pending";
-  if (session.verification_status === "pass") return "Control OK";
-  if (session.verification_status === "fail") return "Control failed";
+  if (session.verification_status === "pass") return "Defended";
+  if (session.verification_status === "fail") return "Vulnerable";
   return "Run error";
+}
+
+function fuzzControlLabel(session: FuzzSession): string | null {
+  if (
+    session.status === "queued" ||
+    session.status === "optimizing" ||
+    session.status === "attacking" ||
+    session.status === "evaluating"
+  ) {
+    return null;
+  }
+  if (session.status === "error") return "Run error";
+  if (session.final_loss != null && session.initial_loss != null) {
+    // If the fuzzer managed to lower the loss, the payload bypassed defenses
+    if (session.final_loss < session.initial_loss) return "Vulnerable";
+    return "Defended";
+  }
+  return "Pending";
 }
 
 function controlClass(session: VerificationSession): string {
@@ -203,7 +222,7 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
     <div className="shrink-0 border border-white/10 bg-black/20 p-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
-          Target fuzz probes
+          Fuzzy Probes
         </p>
         <p className="font-mono text-[10px] text-muted">
           {sessions.filter((s) => s.status === "completed").length}/{sessions.length}
@@ -215,6 +234,7 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
             session.status === "optimizing" ||
             session.status === "attacking" ||
             session.status === "evaluating";
+          const fuzzControl = fuzzControlLabel(session);
           return (
             <div
               key={session.task_id}
@@ -244,9 +264,18 @@ function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
               <p className="mt-1 truncate w-full font-mono text-[9px] text-muted">
                 {FUZZ_LABEL[session.status]}
               </p>
-              {session.final_loss != null && session.initial_loss != null && (
-                <p className="mt-0.5 w-full truncate font-mono text-[9px] text-muted/80">
-                  loss {session.initial_loss.toFixed(2)} → {session.final_loss.toFixed(2)}
+              {fuzzControl && (
+                <p
+                  className={cn(
+                    "mt-0.5 w-full truncate font-mono text-[9px]",
+                    fuzzControl === "Defended"
+                      ? "text-[var(--status-safe)]"
+                      : fuzzControl === "Vulnerable"
+                        ? "text-[var(--status-vulnerable)]"
+                        : "text-muted",
+                  )}
+                >
+                  {fuzzControl}
                 </p>
               )}
               <p className="mt-0.5 truncate w-full font-mono text-[9px] text-muted/60">
@@ -286,9 +315,15 @@ function SessionActivityGrid({
             )}
           >
             <div className="flex items-center justify-between gap-1 w-full">
-              <span className="font-mono text-[10px] text-foreground/90 truncate">
+              <a
+                href={getMitreUrl(session.technique_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[10px] text-foreground/90 truncate hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {session.technique_id}
-              </span>
+              </a>
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -409,7 +444,16 @@ function SessionConsole({
         <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/10 px-3 py-2">
           <div className="min-w-0">
             <p className="font-mono text-xs text-foreground/90">
-              {session.technique_id} · {session.technique_name}
+              <a
+                href={getMitreUrl(session.technique_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline text-accent"
+              >
+                {session.technique_id}
+              </a>
+              {" · "}
+              {session.technique_name}
             </p>
             <p className="truncate font-mono text-[10px] text-muted">
               Target Execution
@@ -526,13 +570,31 @@ function BrowserViewport({
 
       <div className="flex min-h-[180px] flex-1 flex-col items-center justify-center gap-3 p-4 text-center lg:min-h-[240px]">
         {session.session_id ? (
-          <iframe
-            title="Browserbase Live View"
-            src={`https://www.browserbase.com/sessions/${session.session_id}/debug`}
-            className="min-h-[160px] w-full flex-1 rounded border border-white/10 bg-black/50 lg:min-h-0"
-            allow="clipboard-read; clipboard-write"
-            sandbox="allow-same-origin allow-scripts allow-forms"
-          />
+          <div className="flex min-h-[160px] w-full flex-1 flex-col items-center justify-center gap-3 rounded border border-white/10 bg-black/50 lg:min-h-0">
+            <div
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-full border",
+                "border-accent/50 bg-accent/10 text-accent animate-pulse-orange",
+              )}
+            >
+              <MonitorPlay size={24} />
+            </div>
+            <p className="font-mono text-xs text-foreground/90">
+              Browserbase session active
+            </p>
+            <a
+              href={`https://www.browserbase.com/sessions/${session.session_id}/debug`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-xs text-accent transition-colors hover:bg-accent/20"
+            >
+              <MonitorPlay size={14} />
+              Watch live in Browserbase
+            </a>
+            <p className="font-mono text-[10px] text-muted">
+              Session {session.session_id.slice(0, 8)}…
+            </p>
+          </div>
         ) : (
           <>
             <div

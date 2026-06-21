@@ -35,4 +35,7 @@ Browserbase credentials (`BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID`) and
 Anthropic (`ANTHROPIC_API_KEY` for Stagehand) are required for live verification
 against the configured `target_endpoint`.
 
+Remediation PRs require `MINIMAX_API_KEY` and `GITHUB_TOKEN` (`remediation_live`
+on `GET /health`). Patches are never auto-merged.
+
 Redis Stack is required for regression memory (`docker compose up -d redis`).

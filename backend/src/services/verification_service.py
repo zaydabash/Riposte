@@ -80,7 +80,9 @@ class VerificationService:
             + (self._settings.aries_weight_j * base.components.J)
         )
         aries = float(round(aries, 2))
-        is_critical = aries >= self._settings.aries_critical_threshold
+        if control_failed:
+            aries = max(aries, self._settings.aries_critical_threshold)
+        is_critical = control_failed or aries >= self._settings.aries_critical_threshold
 
         await self._index_evidence(result, control_failed)
 

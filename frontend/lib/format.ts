@@ -45,3 +45,9 @@ export const SEVERITY_BORDER: Record<Severity, string> = {
   low: "border-white/10",
   safe: "border-[var(--status-safe)]/40",
 };
+
+export function getMitreUrl(techniqueId: string): string {
+  if (!techniqueId) return "#";
+  const formatted = techniqueId.replace(".", "/");
+  return `https://attack.mitre.org/techniques/${formatted}/`;
+}

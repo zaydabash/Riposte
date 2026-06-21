@@ -36,3 +36,10 @@ def test_control_failure_rubric_detects_signals():
     )
     assert artifacts.technique_id == "T1566"
     assert scenario.evaluate_control_failure(artifacts)
+
+
+def test_scenario_entry_and_repair_urls():
+    scenario = get_scenario("T1566")
+    base = "http://localhost:3000"
+    assert scenario.entry_url(base) == "http://localhost:3000/fixtures/t1566_phishing.html"
+    assert scenario.repair_url(base) == "http://localhost:3000/portal"

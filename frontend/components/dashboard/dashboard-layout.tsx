@@ -46,7 +46,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[1480px] flex-1 flex-col px-6 pb-4 md:px-10">
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[minmax(0,clamp(300px,40vh,480px))_minmax(0,1fr)] lg:items-stretch">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12 lg:grid-rows-[minmax(0,clamp(360px,48vh,560px))_minmax(0,1fr)] lg:items-stretch">
         <aside className="h-full lg:col-span-3 lg:row-start-1">
           <SessionPanel
             phase={phase}
@@ -81,7 +81,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
           <GlassPanel className="flex min-h-[min(420px,48vh)] flex-1 flex-col overflow-hidden p-3">
             <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
-                Verification Console
+                Attack MITRE Tactics
               </p>
               <div className="flex items-center gap-2 font-mono text-[10px] text-muted">
                 <span

@@ -61,7 +61,7 @@ async def test_full_pipeline(monkeypatch):
             payload=task.payload,
             aries_score=task.aries_score,
             status="unavailable",
-            detail="Claude Code not configured in test environment.",
+            detail="MiniMax not configured in test environment.",
             technique_id=task.technique_id,
             baseline_run_id=task.baseline_run_id,
         )
@@ -113,13 +113,14 @@ def test_telemetry_status_without_integrations():
 
 
 @pytest.mark.asyncio
-async def test_submit_audit_uses_real_target_url_by_default(monkeypatch):
+async def test_submit_audit_uses_fixture_entry_url(monkeypatch):
     monkeypatch.setattr(vector_repo_mod, "redis", None)
     settings = get_settings()
     orchestrator = Orchestrator(settings)
     state = await orchestrator.submit_audit(
         _audit_request(
-            target_endpoint="https://target-agent.example.com/chat",
+            target_endpoint="https://target-agent.example.com",
+            technique_ids=["T1566"],
             max_techniques=1,
             max_fuzz_seeds=0,
         )
@@ -128,6 +129,7 @@ async def test_submit_audit_uses_real_target_url_by_default(monkeypatch):
     assert state.verification_sessions
     queued = await orchestrator.scenario_queue.get()
     try:
-        assert queued.target_url == "https://target-agent.example.com/chat"
+        scenario = get_scenario("T1566")
+        assert queued.target_url == scenario.entry_url("https://target-agent.example.com")
     finally:
         orchestrator.scenario_queue.task_done()

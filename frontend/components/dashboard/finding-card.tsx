@@ -49,9 +49,15 @@ export function FindingCard({
               isCritical={finding.is_critical}
             />
             {finding.technique_id && (
-              <span className="font-mono text-[10px] text-accent">
+              <a
+                href={getMitreUrl(finding.technique_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[10px] text-accent hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {finding.technique_id}
-              </span>
+              </a>
             )}
             <span className="font-mono text-[10px] text-muted">
               {formatClock(finding.created_at)}

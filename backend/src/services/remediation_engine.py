@@ -1,17 +1,24 @@
-"""Anthropic patch generation and route mapping."""
+"""MiniMax patch generation and route mapping."""
+
+from __future__ import annotations
 
 import logging
 import re
 from typing import Optional
 from urllib.parse import urlparse
 
-import httpx
+from openai import AsyncOpenAI
 
 from src.config import Settings
+from src.services.minimax_client import strip_thinking
 
 logger = logging.getLogger(__name__)
 
 ROUTE_TO_FILE_PATTERNS = [
+    # Next.js App Router (frontend/app — riposte-example-agent layout)
+    ("frontend/app/{path}/page.tsx", "frontend/app/{path}/page.tsx"),
+    ("frontend/app/{path}/page.jsx", "frontend/app/{path}/page.jsx"),
+    ("frontend/app/{path}/page.js", "frontend/app/{path}/page.js"),
     # Next.js App Router (src/app/.../page.tsx)
     ("src/app/{path}/page.tsx", "src/app/{path}/page.tsx"),
     ("src/app/{path}/page.jsx", "src/app/{path}/page.jsx"),
@@ -21,6 +28,7 @@ ROUTE_TO_FILE_PATTERNS = [
     ("app/{path}/page.jsx", "app/{path}/page.jsx"),
     ("app/{path}/page.js", "app/{path}/page.js"),
     # Root route
+    ("frontend/app/page.tsx", "frontend/app/page.tsx"),
     ("src/app/page.tsx", "src/app/page.tsx"),
     ("app/page.tsx", "app/page.tsx"),
     # Vite/React style
@@ -38,12 +46,18 @@ def _normalize_route(route: str) -> str:
 
 def route_to_file_candidates(url: str) -> list[str]:
     """
-    Map a target URL (e.g. 'http://localhost:3000/admin') to candidate file paths.
+    Map a target URL (e.g. 'http://localhost:3000/portal') to candidate file paths.
     """
     parsed = urlparse(url)
     path_part = _normalize_route(parsed.path)
     if not path_part:
-        return ["src/app/page.tsx", "app/page.tsx", "src/pages/index.tsx", "src/App.tsx"]
+        return [
+            "frontend/app/page.tsx",
+            "src/app/page.tsx",
+            "app/page.tsx",
+            "src/pages/index.tsx",
+            "src/App.tsx",
+        ]
 
     segments = path_part.replace("-", "_").split("/")
     path_with_slashes = "/".join(segments)
@@ -60,12 +74,11 @@ def route_to_file_candidates(url: str) -> list[str]:
             seen.add(filled)
             candidates.append(filled)
 
-    simple = f"src/app/{path_with_slashes}/page.tsx"
-    if simple not in seen:
-        candidates.append(simple)
-    simple_app = f"app/{path_with_slashes}/page.tsx"
-    if simple_app not in seen:
-        candidates.append(simple_app)
+    for prefix in ("frontend/app", "src/app", "app"):
+        simple = f"{prefix}/{path_with_slashes}/page.tsx"
+        if simple not in seen:
+            seen.add(simple)
+            candidates.append(simple)
 
     return candidates
 
@@ -81,12 +94,9 @@ def _extract_code_block(text: str) -> Optional[str]:
     stripped = text.strip()
     if not stripped or stripped.startswith("I "):
         return None
-    # Fallback: only accept text that looks like real code —
-    # must contain a code keyword or balanced braces with meaningful line length.
     stripped_lower = stripped.lower()
     if any(kw in stripped_lower for kw in _CODE_KEYWORDS):
         return stripped
-    # Check for balanced braces across multiple lines (code-like structure).
     if "\n" in stripped:
         opens = stripped.count("{")
         closes = stripped.count("}")
@@ -96,10 +106,11 @@ def _extract_code_block(text: str) -> Optional[str]:
 
 
 class RemediationEngine:
-    """Uses Anthropic API to generate file patches."""
+    """Uses MiniMax to generate file patches."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, minimax: AsyncOpenAI | None = None) -> None:
         self._settings = settings
+        self._minimax = minimax
 
     async def generate_fix(
         self,
@@ -109,8 +120,8 @@ class RemediationEngine:
         language: str = "typescript",
         target_url: str | None = None,
     ) -> Optional[str]:
-        if not self._settings.anthropic_api_key:
-            raise RuntimeError("Set ANTHROPIC_API_KEY for patch generation.")
+        if self._minimax is None:
+            raise RuntimeError("Set MINIMAX_API_KEY for patch generation.")
 
         char_limit = self._settings.max_input_chars
         bounded_log = error_log[:char_limit]
@@ -141,41 +152,24 @@ Rules:
 - Change only what is necessary to fix the error.
 """
 
-        headers = {
-            "x-api-key": self._settings.anthropic_api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        
-        payload = {
-            "model": self._settings.claude_model_id,
-            "max_tokens": self._settings.claude_max_tokens,
-            "temperature": self._settings.claude_temperature,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
-        }
-        
-        async with httpx.AsyncClient(timeout=self._settings.anthropic_http_timeout) as client:
-            r = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
-            r.raise_for_status()
-            data = r.json()
-            
-            if not data.get("content"):
-                return None
-                
-            text = data["content"][0]["text"]
-            fixed = _extract_code_block(text)
+        completion = await self._minimax.chat.completions.create(
+            model=self._settings.minimax_model,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=self._settings.minimax_remediation_timeout,
+        )
+        text = strip_thinking(completion.choices[0].message.content)
+        fixed = _extract_code_block(text)
 
-            if not fixed:
-                logger.warning("Claude returned no parseable code block for %s", file_path)
-                return None
+        if not fixed:
+            logger.warning("MiniMax returned no parseable code block for %s", file_path)
+            return None
 
-            if len(fixed.strip()) < 10:
-                logger.warning(
-                    "Claude returned a trivially small code block (%d chars) for %s — treating as failure",
-                    len(fixed.strip()), file_path,
-                )
-                return None
+        if len(fixed.strip()) < 10:
+            logger.warning(
+                "MiniMax returned a trivially small code block (%d chars) for %s — treating as failure",
+                len(fixed.strip()),
+                file_path,
+            )
+            return None
 
-            return fixed
+        return fixed

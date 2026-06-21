@@ -69,7 +69,7 @@ class Orchestrator:
         self._fuzzer = AdversarialFuzzer(settings, self._embeddings)
         self._target_executor = TargetExecutor(settings)
         self._verification_runner = VerificationRunner(settings)
-        self._runner = RemediationRunner(settings)
+        self._runner = RemediationRunner(settings, minimax=minimax)
         self._repair_validation = RepairValidationService()
 
         self.scenario_queue: asyncio.Queue = asyncio.Queue()
@@ -274,6 +274,7 @@ class Orchestrator:
         for technique_id in technique_ids:
             scenario = get_scenario(technique_id)
             execution_url = str(request.target_endpoint)
+            entry_url = scenario.entry_url(execution_url)
             task_id = _new_id()
             state.verification_sessions.append(
                 VerificationSession(
@@ -295,7 +296,7 @@ class Orchestrator:
                     audit_id=state.audit_id,
                     task_id=task_id,
                     technique_id=technique_id,
-                    target_url=str(request.target_endpoint),
+                    target_url=entry_url,
                     repo_url=str(request.source_repository),
                     verification_mode=request.verification_mode,
                     baseline_run_id=request.baseline_run_id,
@@ -320,6 +321,7 @@ class Orchestrator:
                     seed=seed,
                 )
             )
+
         return state
 
     def get_audit(self, audit_id: str) -> AuditState | None:

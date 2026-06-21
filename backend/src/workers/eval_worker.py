@@ -7,6 +7,8 @@ import logging
 from collections.abc import Callable
 from typing import Awaitable
 
+from urllib.parse import urlparse
+
 from src.config import Settings
 from src.core.models import (
     AriesComponents,
@@ -18,6 +20,7 @@ from src.core.models import (
 )
 from src.services.eval_service import EvalService
 from src.services.verification_service import VerificationService
+from src.scenarios.registry import get_scenario
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +57,17 @@ async def eval_worker(
                 raise TypeError(f"Unexpected eval input: {type(result)}")
 
             await on_finding(finding)
-            if finding.is_critical:
+            if finding.is_critical or finding.control_failed:
+                repair_target = finding.target_url
+                if finding.technique_id and finding.target_url:
+                    parsed = urlparse(finding.target_url)
+                    base = f"{parsed.scheme}://{parsed.netloc}"
+                    repair_target = get_scenario(finding.technique_id).repair_url(base)
                 await remediation_queue.put(
                     RemediationTask(
                         audit_id=finding.audit_id,
                         repo_url=finding.repo_url,
-                        target_url=finding.target_url,
+                        target_url=repair_target,
                         payload=finding.payload,
                         aries_score=finding.aries_score,
                         technique_id=finding.technique_id,

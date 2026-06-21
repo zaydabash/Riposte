@@ -21,8 +21,8 @@ The response is evaluated using the **AI Risk Enablement Score (ARiES)** out of 
 - **Attack Success (A)**: Heuristics to determine if the target refused or complied.
 - **LLM Judge (J)**: An ensemble of LLMs that scores the threat, vulnerability, and impact.
 
-### 4. Auto-Remediation (Anthropic API & GitHub Integration)
-If the ARiES score is dangerously high, Riposte automatically drafts a patch. It uses the **Anthropic API (Claude 3.5 Sonnet)** to analyze the vulnerability and write robust input-sanitization code. It then uses the GitHub API to create a new branch, commit the patched code, and open a Pull Request. This PR is *never* merged automatically—a human must approve it.
+### 4. Auto-Remediation (MiniMax & GitHub)
+If a verification control fails or ARiES is critically high, Riposte drafts a patch. It uses **MiniMax-M3** (OpenAI-compatible API) to analyze the vulnerability and write defensive code. It then uses the GitHub API to create a branch, commit the patch, and open a Pull Request. PRs are *never* merged automatically—a human must approve.
 
 ## Quick Start (Full Stack)
 
@@ -37,7 +37,7 @@ The backend API will be available at `http://localhost:8000`.
 
 ### 2. Configure Environment Variables
 **Backend (`backend/.env`):**
-Ensure your API keys are set for Anthropic, MiniMax, Browserbase, etc. See `backend/.env.example`.
+Ensure your API keys are set for MiniMax, GitHub, Anthropic (Stagehand), Browserbase, etc. See `backend/.env.example`.
 
 **Frontend (`frontend/.env.local`):**
 Ensure the frontend knows where the API is.
@@ -59,5 +59,5 @@ Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) to launc
 - `backend/src/services/fuzzer_service.py` - The adversarial fuzzer logic.
 - `backend/src/services/eval_service.py` - The ARiES scoring math.
 - `backend/src/workers/verification_worker.py` - Browser execution.
-- `backend/src/workers/patch_worker.py` - Auto-remediation PR generation via GitHub API.
+- `backend/src/workers/patch_worker.py` - HITL remediation PR generation (MiniMax + GitHub).
 - `frontend/app/` - Next.js UI using Hexagonal Architecture (Ports/Adapters).

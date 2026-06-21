@@ -33,9 +33,9 @@ const integrationLoops: {
   },
   {
     title: "Regression Memory",
-    partners: "Redis & Claude Code",
+    partners: "Redis & MiniMax",
     description:
-      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger Claude Code repair proposals and mandatory HITL re-verification before merge.",
+      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger MiniMax repair proposals and mandatory HITL re-verification before merge.",
     formula: "leakage",
   },
 ];
@@ -82,10 +82,10 @@ const pillars: {
   {
     number: "05",
     title: "Repair Plane",
-    sponsor: "Claude Code",
+    sponsor: "MiniMax & GitHub",
     formula: "prFix",
     description:
-      "Repair worker proposes defensive patches via Claude Code and opens HITL pull requests. Re-verification runs the same ATT&CK scenarios before merge.",
+      "Repair worker proposes defensive patches via MiniMax and opens HITL pull requests. Re-verification runs the same ATT&CK scenarios before merge.",
   },
 ];
 
@@ -104,7 +104,7 @@ const pipelineSteps = [
   },
   {
     label: "HITL Remediation",
-    detail: "Critical scores trigger Claude Code PR, no auto-merge",
+    detail: "Critical findings trigger MiniMax patch + HITL PR, no auto-merge",
   },
 ];
 

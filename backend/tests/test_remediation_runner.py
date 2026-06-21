@@ -2,7 +2,7 @@ import pytest
 
 from src.config import Settings
 from src.core.models import RemediationTask
-from src.services.remediation_engine import route_to_file_candidates
+from src.services.remediation_engine import RemediationEngine, route_to_file_candidates
 from src.workers.patch_worker import RemediationRunner, extract_repo_full_name
 
 
@@ -13,9 +13,15 @@ def test_extract_repo_full_name():
     )
 
 
-def test_route_to_file_candidates_uses_target_path():
+def test_route_to_file_candidates_prefers_frontend_app():
+    candidates = route_to_file_candidates("https://target.example.com/portal")
+    assert candidates[0] == "frontend/app/portal/page.tsx"
+    assert "src/app/portal/page.tsx" in candidates
+
+
+def test_route_to_file_candidates_nested_path():
     candidates = route_to_file_candidates("https://target.example.com/admin/users")
-    assert candidates[0] == "src/app/admin/users/page.tsx"
+    assert candidates[0] == "frontend/app/admin/users/page.tsx"
     assert "app/admin/users/page.tsx" in candidates
 
 
@@ -30,7 +36,7 @@ async def test_remediation_runner_opens_pr_for_target_route():
             return "main"
 
         async def get_file_content(self, repo_full_name, file_path, branch):
-            if file_path == "src/app/admin/page.tsx":
+            if file_path == "frontend/app/portal/page.tsx":
                 return "export default function Page() { return <form /> }"
             return None
 
@@ -50,12 +56,13 @@ async def test_remediation_runner_opens_pr_for_target_route():
 
     class FakeEngine:
         async def generate_fix(self, error_log, code_snippet, file_path, target_url=None):
-            assert file_path == "src/app/admin/page.tsx"
+            assert file_path == "frontend/app/portal/page.tsx"
             assert "T1566" in error_log
+            assert "Auth-domain allowlisting" in error_log
             return "export default function Page() { return null }"
 
     runner = RemediationRunner(
-        Settings(ANTHROPIC_API_KEY="anthropic-test", GITHUB_TOKEN="github-test")
+        Settings(MINIMAX_API_KEY="minimax-test", GITHUB_TOKEN="github-test")
     )
     fake_github = FakeGitHub()
     runner._github = fake_github
@@ -65,7 +72,7 @@ async def test_remediation_runner_opens_pr_for_target_route():
         RemediationTask(
             audit_id="audit-1",
             repo_url="https://github.com/example/app",
-            target_url="https://target.example.com/admin",
+            target_url="https://target.example.com/portal",
             payload="credential leak",
             aries_score=91.2,
             technique_id="T1566",
@@ -74,5 +81,31 @@ async def test_remediation_runner_opens_pr_for_target_route():
 
     assert result.status == "pr_created"
     assert result.pr_url == "https://github.com/example/app/pull/1"
-    assert result.target_url == "https://target.example.com/admin"
-    assert fake_github.file_path == "src/app/admin/page.tsx"
+    assert result.target_url == "https://target.example.com/portal"
+    assert fake_github.file_path == "frontend/app/portal/page.tsx"
+
+
+@pytest.mark.asyncio
+async def test_remediation_engine_calls_minimax():
+    class FakeCompletion:
+        def __init__(self, content: str):
+            self.choices = [type("Choice", (), {"message": type("Msg", (), {"content": content})()})()]
+
+    class FakeMiniMax:
+        class chat:
+            class completions:
+                @staticmethod
+                async def create(**kwargs):
+                    assert kwargs["model"] == "MiniMax-M3"
+                    return FakeCompletion("```tsx\nexport const fixed = true;\n```")
+
+    engine = RemediationEngine(
+        Settings(MINIMAX_API_KEY="key", MINIMAX_MODEL="MiniMax-M3"),
+        FakeMiniMax(),
+    )
+    fixed = await engine.generate_fix(
+        error_log="control failed",
+        code_snippet="export const broken = true;",
+        file_path="frontend/app/portal/page.tsx",
+    )
+    assert fixed == "export const fixed = true;"

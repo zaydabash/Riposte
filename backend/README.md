@@ -11,7 +11,7 @@ producer–consumer core.
 Phase 1  Plan (scenario mutation)   scenario_queue ──▶ verify_queue
 Phase 2  Verify (Browserbase)       verify_queue     ──▶ eval_queue
 Phase 3  Evaluate (ARiES + rubrics) eval_queue       ──▶ remediation_queue
-Phase 4  Repair (Claude Code)       remediation_queue ──▶ HITL PR + re-verify
+Phase 4  Repair (MiniMax)            remediation_queue ──▶ HITL PR + re-verify
 ```
 
 Start Redis Stack before the backend: `docker compose up -d redis`
@@ -32,8 +32,8 @@ ARiES = 0.35·M + 0.35·L + 0.20·A + 0.10·J      (each component 0–100)
 | **A** | Control failure | Whether verification controls failed (agent should block/warn) |
 | **J** | Judge | Ensemble of MiniMax-M3 LLM judges (threat/vuln/impact) |
 
-A finding with `ARiES ≥ 75` is **critical** and triggers a HITL repair PR plus
-automatic re-verification of the same ATT&CK scenario.
+A finding with `control_failed=true` or `ARiES ≥ 75` is **critical** and triggers
+a HITL repair PR plus automatic re-verification of the same ATT&CK scenario.
 
 ## Scenario parameter mutation (Phase 1)
 
@@ -46,17 +46,18 @@ evidence search informs regression prioritization when Stack is available.
 | Track | Where | When unconfigured |
 |-------|-------|-------------------|
 | **Browserbase / Stagehand** | `workers/verification_worker.py`, `workers/offensive_worker.py` | Verification/execution returns error (`live=False`) |
-| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Evaluation returns an error finding |
+| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py`, `services/remediation_engine.py` | Judge errors / remediation `unavailable` |
 | **Sentry** | `core/telemetry.py` | Errors logged locally |
 | **Redis Stack** | `repositories/vector_repo.py` | Vector memory skipped |
-| **Anthropic / Claude Code** | `workers/patch_worker.py` | Remediation status `unavailable` |
+| **Anthropic** | `workers/verification_worker.py` (Stagehand only) | Live verification unavailable |
 
 TokenRouter's OpenAI-compatible MiniMax route is supported through
 `MINIMAX_BASE_URL=https://api.tokenrouter.com/v1`; `MINIMAX_GROUP_ID` is only
 needed for native MiniMax embedding routes that require it.
 
-Browserbase, MiniMax, and Claude Code are required for live verification,
-ARiES judging, and HITL repair respectively; optional Redis/Sentry integrations
+Browserbase, Anthropic (Stagehand), and MiniMax are required for live
+verification, browser automation, and ARiES judging/remediation respectively;
+GitHub token is required for HITL PRs. Optional Redis/Sentry integrations
 degrade gracefully.
 
 ## Quick start

@@ -34,6 +34,9 @@ export function IntelligenceLayer({
 }: IntelligenceLayerProps) {
   const global = deriveGlobalAries(state);
   const band = ariesBand(global);
+  // Remediation activity belongs in the Remediation Queue below, not the alert
+  // feed — the queue is driven by state.remediations directly.
+  const feedAlerts = alerts.filter((alert) => alert.type !== "new_remediation");
   const remediations = state?.remediations ? [...state.remediations] : [];
   remediations.sort(
     (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || 0,
@@ -71,7 +74,7 @@ export function IntelligenceLayer({
         id="section-alerts"
         className={cn(
           panelClass,
-          compact && "flex min-h-[9.5rem] flex-[1.4] flex-col overflow-hidden",
+          compact && "flex min-h-[8rem] flex-1 flex-col overflow-hidden",
         )}
       >
         <div
@@ -85,7 +88,7 @@ export function IntelligenceLayer({
             Risk Alert Feed
           </h3>
         </div>
-        {alerts.length === 0 ? (
+        {feedAlerts.length === 0 ? (
           <p className="font-mono text-[10px] text-muted">No alerts.</p>
         ) : (
           <ul
@@ -95,7 +98,7 @@ export function IntelligenceLayer({
               compact ? "min-h-0 flex-1" : "max-h-64",
             )}
           >
-            {alerts.map((alert) => (
+            {feedAlerts.map((alert) => (
               <li
                 key={alert.id}
                 className="border-l-2 border-white/10 bg-black/20 px-2 py-1.5"
@@ -128,7 +131,7 @@ export function IntelligenceLayer({
         id="section-remediation"
         className={cn(
           panelClass,
-          compact ? "flex min-h-0 flex-1 flex-col overflow-hidden" : undefined,
+          compact ? "flex min-h-[10rem] flex-[1.6] flex-col overflow-hidden" : undefined,
         )}
       >
         <div

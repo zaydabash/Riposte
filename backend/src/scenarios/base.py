@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urljoin
+
 from pydantic import BaseModel, Field
 
 from src.scenarios.artifacts import BrowserArtifacts, NetworkEntry, StorageSnapshot
@@ -49,8 +51,18 @@ class TechniqueScenario(BaseModel):
     evidence_schema: list[str] = Field(default_factory=list)
     rubric: VerificationRubric = Field(default_factory=VerificationRubric)
     repair_template: str = ""
+    target_path: str = "/"
+    repair_path: str = "/"
     default_parameters: dict[str, str] = Field(default_factory=dict)
     browser_steps: list[BrowserStep] = Field(default_factory=list)
+
+    def entry_url(self, base_url: str) -> str:
+        """Browser fixture URL for live verification."""
+        return urljoin(base_url.rstrip("/") + "/", self.target_path.lstrip("/"))
+
+    def repair_url(self, base_url: str) -> str:
+        """Hub page URL used to route remediation patches to source files."""
+        return urljoin(base_url.rstrip("/") + "/", self.repair_path.lstrip("/"))
 
     def evaluate_control_failure(self, artifacts: BrowserArtifacts) -> bool:
         """Return True when verification controls failed (risk exposed)."""
