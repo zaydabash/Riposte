@@ -177,7 +177,7 @@ export function IntelligenceLayer({
         </div>
         {remediations.length === 0 ? (
           <p className="font-mono text-[10px] leading-snug text-muted">
-            No repair proposals yet. Critical control failures trigger HITL PRs and re-verification.
+            No repair proposals yet. Critical control failures trigger HITL PRs (awaiting human merge).
           </p>
         ) : (
           <ul

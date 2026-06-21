@@ -68,7 +68,8 @@ read of the transcript.
 Plan ──▶ Verify ──▶ Evaluate ──▶ Repair
  │          │            │           │
  │          │            │           └─ MiniMax drafts a fix,
- │          │            │              opens a PR, re-verifies on merge
+ │          │            │              opens a PR (awaiting human merge);
+ │          │            │              post-merge re-verify via REPAIR_VALIDATION audit
  │          │            └─ ARiES = 0.35·M + 0.35·L + 0.20·A + 0.10·J
  │          └─ Browserbase + Stagehand run the live scenario,
  │             capture DOM before/after + network log
@@ -129,8 +130,9 @@ ARiES = 0.35·M + 0.35·L + 0.20·A + 0.10·J      (each component 0–100)
 | **J** | Judge | Ensemble of independent LLM judges scoring threat / vulnerability / impact | No single judge is trusted alone — independent judges that agree are far more reliable than any one of them |
 
 A finding with `control_failed = true` or `ARiES ≥ 75` is **critical** and
-triggers a HITL repair PR plus automatic re-verification of the same ATT&CK
-scenario.
+triggers a HITL repair PR. The dashboard shows **awaiting human merge** until
+the PR is merged and the target redeploys; a `repair_validation` audit then
+re-runs the same ATT&CK scenario against the live endpoint.
 
 </details>
 
@@ -212,7 +214,7 @@ queue all reflect the actual audit in progress, not a scripted demo.
 Phase 1  Plan (scenario + fuzz seed selection)   scenario_queue ──▶ verify_queue
 Phase 2  Verify (Browserbase)                    verify_queue   ──▶ eval_queue
 Phase 3  Evaluate (ARiES + control rubrics)       eval_queue     ──▶ remediation_queue
-Phase 4  Repair (HITL PR + re-verify)             remediation_queue
+Phase 4  Repair (HITL PR, post-merge re-verify)   remediation_queue
 ```
 
 Built as a strictly layered FastAPI service (Routers → Services →

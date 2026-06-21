@@ -35,7 +35,7 @@ const integrationLoops: {
     title: "Regression Memory",
     partners: "Redis & MiniMax",
     description:
-      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger MiniMax repair proposals and mandatory HITL re-verification before merge.",
+      "Redis Vector Search indexes sanitized evidence summaries for regression detection. Verified control failures trigger MiniMax repair proposals and HITL pull requests; post-merge re-verification runs via a repair_validation audit.",
     formula: "leakage",
   },
 ];

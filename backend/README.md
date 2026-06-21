@@ -11,7 +11,7 @@ producer–consumer core.
 Phase 1  Plan (scenario mutation)   scenario_queue ──▶ verify_queue
 Phase 2  Verify (Browserbase)       verify_queue     ──▶ eval_queue
 Phase 3  Evaluate (ARiES + rubrics) eval_queue       ──▶ remediation_queue
-Phase 4  Repair (MiniMax)            remediation_queue ──▶ HITL PR + re-verify
+Phase 4  Repair (MiniMax)            remediation_queue ──▶ HITL PR (awaiting merge)
 ```
 
 Start Redis Stack before the backend: `docker compose up -d redis`
@@ -33,7 +33,8 @@ ARiES = 0.35·M + 0.35·L + 0.20·A + 0.10·J      (each component 0–100)
 | **J** | Judge | Ensemble of MiniMax-M3 LLM judges (threat/vuln/impact) |
 
 A finding with `control_failed=true` or `ARiES ≥ 75` is **critical** and triggers
-a HITL repair PR plus automatic re-verification of the same ATT&CK scenario.
+a HITL repair PR. Re-verification runs only after merge and redeploy (via a
+`repair_validation` audit), not against the unmerged live target.
 
 ## Scenario parameter mutation (Phase 1)
 
