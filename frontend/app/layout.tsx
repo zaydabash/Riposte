@@ -15,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Riposte | Autonomous Defensive Scaffolding",
+  title: "Riposte",
   description:
-    "A continuous security pipeline for LLM agents. Fuzz with Stagehand, evaluate with ARiES, remediate via HITL pull requests.",
+    "An autonomous security pipeline for LLM agents. Fuzz your models, evaluate vulnerabilities mathematically with ARiES, and automatically generate patches.",
 };
 
 export default function RootLayout({

@@ -35,9 +35,9 @@ export function HeroSection() {
           </h1>
 
           <p className="animate-fade-in-up animation-delay-600 mx-auto max-w-3xl text-lg leading-relaxed text-foreground/80 md:text-xl">
-            Autonomous defensive scaffolding for LLM agents: fuzz, evaluate
-            with ARiES, and ship HITL remediation patches through a modular
-            async pipeline.
+            An autonomous security pipeline for LLM agents. Fuzz your models,
+            evaluate vulnerabilities mathematically with ARiES, and automatically
+            generate patches to fix them.
           </p>
 
           <div className="animate-fade-in-up animation-delay-800 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">

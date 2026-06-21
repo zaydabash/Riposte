@@ -70,10 +70,10 @@ export function ArchitectureSection() {
               The Core Engine.
             </h2>
             <p className="mt-4 font-mono text-sm text-accent">
-              Riposte: Autonomous Defensive Scaffolding
+              An autonomous security pipeline for LLM agents.
             </p>
             <p className="mt-2 max-w-3xl text-lg text-foreground/90">
-              A continuous security pipeline for LLM agents, built on rigorous mathematical models.
+              Built on rigorous mathematical models and the <a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer" className="underline hover:text-accent">MITRE ATT&CK</a> framework.
             </p>
           </div>
         </ScrollReveal>

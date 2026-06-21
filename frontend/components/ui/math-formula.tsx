@@ -150,14 +150,14 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
   simulatedAnnealing: (
     <>
       <Var>P</Var>
-      <Op>(</Op>
+      <Op>{"("}</Op>
       <Var>accept</Var>
-      <Op>) = </Op>
+      <Op>{") = "}</Op>
       <Var>e</Var>
       <Sup>
-        <Op>-</Op>
+        <Op>{"-"}</Op>
         <Var>ΔLoss</Var>
-        <Op> / </Op>
+        <Op>{" / "}</Op>
         <Var>T</Var>
       </Sup>
     </>
@@ -165,13 +165,13 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
   crossEntropy: (
     <>
       <Var>Loss</Var>
-      <Op> = -</Op>
+      <Op>{" = -"}</Op>
       <Var>log</Var>
-      <Op>(</Op>
+      <Op>{"("}</Op>
       <Var>P</Var>
-      <Op>(</Op>
+      <Op>{"("}</Op>
       <Var>objective</Var>
-      <Op>)) + </Op>
+      <Op>{")) + "}</Op>
       <Var>Penalty</Var>
       <Sub>refusal</Sub>
     </>
