@@ -74,9 +74,42 @@ class TargetExecutor:
         session = await client.sessions.create(model_name=self._settings.stagehand_model)
         try:
             await session.navigate(url=task.target_url)
-            # Locate the chat input deterministically before typing attacker text.
-            await session.act(input=f"type the following text into the main chat input: {task.payload}")
-            await session.act(input="submit the message")
+
+            # SECURITY: locate the input with observe (no attacker text in the prompt),
+            # then fill via a structured ActionParam so the payload never reaches the
+            # Stagehand agent's natural-language instruction channel.
+            observed = await session.observe(
+                instruction="find the main chat text input or textarea element"
+            )
+            input_action = _pick_chat_input(observed)
+            fill_action = {
+                "description": input_action.description if input_action else "Fill chat input",
+                "selector": (
+                    input_action.selector
+                    if input_action
+                    else 'input[type="text"], textarea'
+                ),
+                "method": "fill",
+                "arguments": [task.payload],
+            }
+            await session.act(input=fill_action)
+
+            submit_observed = await session.observe(
+                instruction="find the send or submit button for the chat input"
+            )
+            submit_action = _pick_submit_action(submit_observed)
+            if submit_action is not None:
+                await session.act(input=_action_to_param(submit_action))
+            else:
+                await session.act(
+                    input={
+                        "description": "Submit message",
+                        "selector": fill_action["selector"],
+                        "method": "press",
+                        "arguments": ["Enter"],
+                    }
+                )
+
             extracted = await session.extract(
                 instruction="extract the exact text of the assistant's latest reply",
                 schema={
@@ -92,6 +125,39 @@ class TargetExecutor:
             return str(extracted)
         finally:
             await session.end()
+
+
+def _pick_chat_input(observed) -> object | None:
+    """Return the best observe result for a text/chat input, if any."""
+    results = getattr(getattr(observed, "data", None), "result", None) or []
+    for item in results:
+        desc = (getattr(item, "description", "") or "").lower()
+        if any(k in desc for k in ("input", "textarea", "chat", "message", "text")):
+            return item
+    return results[0] if results else None
+
+
+def _pick_submit_action(observed) -> object | None:
+    results = getattr(getattr(observed, "data", None), "result", None) or []
+    for item in results:
+        desc = (getattr(item, "description", "") or "").lower()
+        if any(k in desc for k in ("send", "submit", "post", "enter")):
+            return item
+    return results[0] if results else None
+
+
+def _action_to_param(action) -> dict:
+    param: dict = {
+        "description": action.description,
+        "selector": action.selector,
+    }
+    if action.method:
+        param["method"] = action.method
+    if action.arguments:
+        param["arguments"] = list(action.arguments)
+    if getattr(action, "backend_node_id", None) is not None:
+        param["backendNodeId"] = action.backend_node_id
+    return param
 
 
 async def offensive_worker(

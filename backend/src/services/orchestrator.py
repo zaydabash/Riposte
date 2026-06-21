@@ -56,16 +56,17 @@ class Orchestrator:
 
         minimax = build_minimax_client(settings)
         self._fuzzer = AdversarialFuzzer(settings, self._embeddings)
+        self._vector_repo = VectorRepository(settings)
         self._eval_service = EvalService(
             settings=settings,
             embeddings=self._embeddings,
             baseline=self._baseline,
             private_corpus=list(PRIVATE_CORPUS),
             minimax=minimax,
+            vector_repo=self._vector_repo,
         )
         self._executor = TargetExecutor(settings, list(PRIVATE_CORPUS))
         self._runner = RemediationRunner(settings)
-        self._vector_repo = VectorRepository(settings)
 
         self.fuzz_queue: asyncio.Queue = asyncio.Queue()
         self.attack_queue: asyncio.Queue = asyncio.Queue()
@@ -79,7 +80,13 @@ class Orchestrator:
 
     # --- lifecycle -----------------------------------------------------------
     async def start(self) -> None:
-        await self._vector_repo.ensure_index(self._embeddings.dim)
+        dim = self._embeddings.dim
+        await self._vector_repo.ensure_index(dim)
+        await self._vector_repo.ensure_private_index(dim)
+        for i, doc in enumerate(PRIVATE_CORPUS):
+            await self._vector_repo.index_private_document(
+                str(i), doc, self._embeddings.embed(doc)
+            )
         for _ in range(self._settings.fuzzer_workers):
             self._tasks.append(asyncio.create_task(
                 fuzz_worker(
