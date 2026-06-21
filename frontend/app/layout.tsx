@@ -15,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Riposte — Continuous Red-Team Pipeline",
+  title: "Riposte | Autonomous Defensive Scaffolding",
   description:
-    "Enterprise-grade continuous red-teaming that breaks AI models, proves vulnerabilities mathematically, and writes the patch.",
+    "A continuous security pipeline for LLM agents. Fuzz with Stagehand, evaluate with ARiES, remediate via HITL pull requests.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,10 @@ export default function RootLayout({
       lang="en"
       className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-background text-foreground font-sans"
+      >
         {children}
       </body>
     </html>

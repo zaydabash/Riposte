@@ -61,7 +61,7 @@ export function SystemGraph({ state }: SystemGraphProps) {
       </div>
       {active === null && (
         <p className="font-mono text-xs text-muted">
-          Idle — start an audit to activate the pipeline overlay.
+          Idle. Start an audit to activate the pipeline overlay.
         </p>
       )}
     </div>

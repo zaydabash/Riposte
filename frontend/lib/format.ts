@@ -1,9 +1,9 @@
-/** Small, pure presentation helpers. Return "—" rather than fabricate values. */
+/** Small, pure presentation helpers. Return "N/A" rather than fabricate values. */
 
 import type { Severity } from "@/lib/backend-types";
 
 export function formatRelativeTime(epochMs: number | null, nowMs: number): string {
-  if (epochMs === null) return "—";
+  if (epochMs === null) return "N/A";
   const deltaSec = Math.max(0, Math.round((nowMs - epochMs) / 1000));
   if (deltaSec < 1) return "just now";
   if (deltaSec < 60) return `${deltaSec}s ago`;
@@ -14,9 +14,9 @@ export function formatRelativeTime(epochMs: number | null, nowMs: number): strin
 }
 
 export function formatClock(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "N/A";
   const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "—";
+  if (Number.isNaN(t)) return "N/A";
   return new Date(t).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -25,7 +25,7 @@ export function formatClock(iso: string | null | undefined): string {
 }
 
 export function formatScore(score: number | null | undefined): string {
-  if (score === null || score === undefined || Number.isNaN(score)) return "—";
+  if (score === null || score === undefined || Number.isNaN(score)) return "N/A";
   return score.toFixed(1);
 }
 

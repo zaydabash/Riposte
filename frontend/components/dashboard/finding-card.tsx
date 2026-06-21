@@ -84,7 +84,7 @@ export function FindingCard({
               Target response
             </p>
             <p className="font-mono text-xs whitespace-pre-wrap text-foreground/75">
-              {finding.response || "—"}
+              {finding.response || "N/A"}
             </p>
           </div>
           {leaked.length > 0 && (

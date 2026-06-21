@@ -65,13 +65,7 @@ export default function DashboardPage() {
             >
               RIPOSTE
             </Link>
-            <span className="hidden font-mono text-[10px] tracking-widest text-muted uppercase md:inline">
-              Control Plane
-            </span>
           </div>
-          <span className="font-mono text-[10px] tracking-widest text-muted uppercase">
-            Continuous Red-Team Pipeline
-          </span>
         </div>
       </header>
 

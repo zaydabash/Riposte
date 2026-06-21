@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 type Pixel = {
   x: number;
@@ -196,13 +197,13 @@ function PixelCanvas({ colors, gap = 6, speed = 30 }: PixelCanvasProps) {
   );
 }
 
-function useDashboardPixelColors() {
+function useThemePixelColors(themeClass: string) {
   const [themeColors, setThemeColors] = useState<string[]>([]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
 
-    const container = document.querySelector(".dashboard-theme");
+    const container = document.querySelector(themeClass);
     const target = container ?? document.body;
 
     const mutedEl = document.createElement("div");
@@ -218,16 +219,32 @@ function useDashboardPixelColors() {
     target.removeChild(primaryEl);
 
     setThemeColors([muted, muted, muted, muted, primary]);
-  }, []);
+  }, [themeClass]);
 
   return themeColors;
 }
 
-export function PixelBackground() {
-  const themeColors = useDashboardPixelColors();
+interface PixelBackgroundProps {
+  themeClass?: string;
+  fixed?: boolean;
+  className?: string;
+}
+
+export function PixelBackground({
+  themeClass = ".dashboard-theme",
+  fixed = true,
+  className,
+}: PixelBackgroundProps = {}) {
+  const themeColors = useThemePixelColors(themeClass);
 
   return (
-    <div className="pointer-events-none fixed inset-0 isolate bg-background">
+    <div
+      className={cn(
+        "pointer-events-none isolate bg-background",
+        fixed ? "fixed inset-0" : "absolute inset-0",
+        className,
+      )}
+    >
       <div className="absolute inset-0 z-0">
         {themeColors.length > 0 && (
           <PixelCanvas colors={themeColors} gap={6} speed={30} />

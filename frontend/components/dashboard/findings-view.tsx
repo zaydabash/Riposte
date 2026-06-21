@@ -30,7 +30,7 @@ export function FindingsView({ state, isActive }: FindingsViewProps) {
         <Crosshair className="text-muted" size={28} />
         <p className="font-mono text-sm text-muted">
           {isActive
-            ? "Fuzzing in progress — findings will stream in as the pipeline evaluates payloads."
+            ? "Fuzzing in progress. Findings will stream in as the pipeline evaluates payloads."
             : "No findings yet. Start an audit to project live results here."}
         </p>
       </div>
@@ -44,7 +44,7 @@ export function FindingsView({ state, isActive }: FindingsViewProps) {
           key={findingKey(finding)}
           finding={finding}
           sequenceIndex={i + 1}
-          targetEndpoint={state?.target_endpoint ?? "—"}
+          targetEndpoint={state?.target_endpoint ?? "N/A"}
           isNew={!seenRef.current.has(findingKey(finding))}
         />
       ))}

@@ -148,7 +148,7 @@ export function ControlPlane({
         <div className="mb-5 border-l-2 border-accent/40 pl-4">
           <h2 className="text-lg text-foreground">New Audit</h2>
           <p className="mt-1 font-mono text-xs text-muted">
-            All fields required — no defaults applied
+            All fields required. No defaults applied
           </p>
         </div>
 

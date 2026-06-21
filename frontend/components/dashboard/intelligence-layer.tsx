@@ -35,7 +35,7 @@ export function IntelligenceLayer({ state, alerts }: IntelligenceLayerProps) {
   return (
     <div className="space-y-8">
       {/* Global ARiES score */}
-      <GlassPanel className="p-6">
+      <GlassPanel className="panel-hover-glow p-6">
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
           Global ARiES
         </p>
@@ -50,7 +50,7 @@ export function IntelligenceLayer({ state, alerts }: IntelligenceLayerProps) {
       </GlassPanel>
 
       {/* Risk alert feed */}
-      <GlassPanel className="p-6">
+      <GlassPanel className="panel-hover-glow p-6">
         <div className="mb-4 flex items-center gap-2">
           <ShieldAlert size={16} className="text-accent" />
           <h3 className="text-sm text-foreground/90">Risk Alert Feed</h3>
@@ -87,7 +87,7 @@ export function IntelligenceLayer({ state, alerts }: IntelligenceLayerProps) {
       </GlassPanel>
 
       {/* Remediation queue */}
-      <GlassPanel className="p-6">
+      <GlassPanel className="panel-hover-glow p-6">
         <div className="mb-4 flex items-center gap-2">
           <Wrench size={16} className="text-accent" />
           <h3 className="text-sm text-foreground/90">Remediation Queue</h3>
@@ -128,7 +128,7 @@ export function IntelligenceLayer({ state, alerts }: IntelligenceLayerProps) {
                   </a>
                 ) : (
                   <p className="mt-2 font-mono text-[11px] text-muted/60">
-                    PR pending — no URL yet
+                    PR pending, no URL yet
                   </p>
                 )}
               </li>
