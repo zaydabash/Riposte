@@ -14,32 +14,34 @@
   --radius: 0px;
 }
 
-/* Dashboard: mature black & grey palette */
+/* Dashboard: black control plane with restored landing orange accent. */
 .dashboard-theme {
   --bg-primary: #0a0a0a;
   --bg-surface: #111111;
   --text-primary: #e0e0e0;
-  --text-muted: #666666;
+  --text-muted: #777777;
   --border-glass: rgba(255, 255, 255, 0.08);
-  --accent-orange: #a0a0a0;
-  --accent-orange-hot: #cccccc;
-  --status-running: #888888;
-  --color-accent: #a0a0a0;
-  --color-accent-hot: #cccccc;
-  --color-muted: #666666;
+  --accent-orange: #f5a623;
+  --accent-orange-hot: #ff6b00;
+  --status-running: #f5a623;
+  --color-accent: #f5a623;
+  --color-accent-hot: #ff6b00;
+  --color-muted: #777777;
   --color-foreground: #e0e0e0;
   --color-background: #0a0a0a;
   --color-surface: #111111;
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-primary: #888888;
-  --color-primary-foreground: #ffffff;
+  --color-primary: #f5a623;
+  --color-primary-foreground: #0a0a0a;
   --color-secondary: #1a1a1a;
   --color-secondary-foreground: #cccccc;
   --color-input: rgba(255, 255, 255, 0.1);
-  --color-ring: rgba(255, 255, 255, 0.2);
+  --color-ring: rgba(245, 166, 35, 0.35);
   --color-card: rgba(20, 20, 20, 0.8);
   --color-card-foreground: #e0e0e0;
-  --color-muted-foreground: #666666;
+  --color-muted-foreground: #777777;
+  --status-vulnerable: #ff4444;
+  --status-safe: #4ade80;
 }
 
 .landing-theme * {
