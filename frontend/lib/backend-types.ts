@@ -61,6 +61,27 @@ export interface RemediationResult {
   readonly created_at: string; // ISO 8601
 }
 
+export type FuzzSessionStatus =
+  | "queued"
+  | "optimizing"
+  | "attacking"
+  | "evaluating"
+  | "completed"
+  | "error";
+
+export interface FuzzSession {
+  readonly task_id: string;
+  readonly seed: string;
+  readonly target_url: string;
+  readonly status: FuzzSessionStatus;
+  readonly generated_payload?: string | null;
+  readonly initial_loss?: number | null;
+  readonly final_loss?: number | null;
+  readonly response?: string | null;
+  readonly error?: string | null;
+  readonly updated_at: string;
+}
+
 /** Backend `AuditState` — the complete snapshot returned by each poll. */
 export interface RiposteAuditState {
   readonly audit_id: string;
@@ -75,6 +96,7 @@ export interface RiposteAuditState {
   readonly findings: readonly Finding[];
   readonly remediations: readonly RemediationResult[];
   readonly verification_sessions?: readonly VerificationSession[];
+  readonly fuzz_sessions?: readonly FuzzSession[];
   readonly created_at: string; // ISO 8601
   readonly updated_at: string; // ISO 8601
 }
@@ -113,7 +135,6 @@ export interface VerificationSession {
   readonly task_id: string;
   readonly technique_id: string;
   readonly technique_name: string;
-  readonly fixture_url: string;
   readonly status: VerificationSessionStatus;
   readonly live: boolean;
   readonly session_id?: string | null;

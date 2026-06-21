@@ -14,11 +14,36 @@ from src.services.eval_service import (
 )
 
 
+class _FakeMessage:
+    content = '{"threat_score":90,"vuln_score":90,"impact_score":90}'
+
+
+class _FakeChoice:
+    message = _FakeMessage()
+
+
+class _FakeCompletion:
+    choices = [_FakeChoice()]
+
+
+class _FakeCompletions:
+    async def create(self, **kwargs):
+        return _FakeCompletion()
+
+
+class _FakeChat:
+    completions = _FakeCompletions()
+
+
+class _FakeMiniMax:
+    chat = _FakeChat()
+
+
 def _service() -> EvalService:
     settings = Settings(EMBEDDING_DIM=256, MINIMAX_API_KEY=None)
     emb = EmbeddingProvider(settings)
     baseline = BaselineModel.fit(np.array([emb.embed(t) for t in BENIGN_BASELINE]))
-    return EvalService(settings, emb, baseline, list(PRIVATE_CORPUS), minimax=None)
+    return EvalService(settings, emb, baseline, list(PRIVATE_CORPUS), minimax=_FakeMiniMax())
 
 
 def test_attack_success_low_on_refusal():

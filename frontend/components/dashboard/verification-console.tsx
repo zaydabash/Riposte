@@ -14,7 +14,7 @@ import {
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RiposteAuditState, VerificationSession } from "@/lib/backend-types";
+import type { FuzzSession, RiposteAuditState, VerificationSession } from "@/lib/backend-types";
 import {
   deriveActiveSessionIndex,
   sessionKey,
@@ -124,6 +124,7 @@ export function VerificationConsole({
   compact = false,
 }: VerificationConsoleProps) {
   const sessions = sortVerificationSessions(state);
+  const fuzzSessions = state?.fuzz_sessions ?? [];
   const [selectedIndex, setSelectedIndex] = useState(0);
   const manualRef = useRef(false);
 
@@ -170,6 +171,7 @@ export function VerificationConsole({
           setSelectedIndex(index);
         }}
       />
+      <FuzzActivityStrip sessions={fuzzSessions} />
       <SessionCarouselHeader
         sessions={sessions}
         selectedIndex={selectedIndex}
@@ -183,6 +185,79 @@ export function VerificationConsole({
         verificationLiveReady={verificationLiveReady}
         compact={compact}
       />
+    </div>
+  );
+}
+
+const FUZZ_LABEL: Record<FuzzSession["status"], string> = {
+  queued: "Queued",
+  optimizing: "Optimizing",
+  attacking: "Target",
+  evaluating: "Scoring",
+  completed: "Done",
+  error: "Error",
+};
+
+function FuzzActivityStrip({ sessions }: { sessions: readonly FuzzSession[] }) {
+  if (sessions.length === 0) return null;
+
+  return (
+    <div className="border border-white/10 bg-black/20 p-2">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
+          Target fuzz probes
+        </p>
+        <p className="font-mono text-[10px] text-muted">
+          {sessions.filter((s) => s.status === "completed").length}/{sessions.length}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+        {sessions.map((session, index) => {
+          const active =
+            session.status === "optimizing" ||
+            session.status === "attacking" ||
+            session.status === "evaluating";
+          return (
+            <div
+              key={session.task_id}
+              className={cn(
+                "min-w-0 border bg-black/40 p-2",
+                session.status === "error"
+                  ? "border-[var(--status-vulnerable)]/50"
+                  : active
+                    ? "border-accent/50"
+                    : "border-white/10",
+              )}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-mono text-[10px] text-foreground/90">
+                  FZ-{index + 1}
+                </span>
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    active && "bg-accent animate-pulse-orange",
+                    session.status === "completed" && "bg-[var(--status-safe)]",
+                    session.status === "queued" && "bg-white/20",
+                    session.status === "error" && "bg-[var(--status-vulnerable)]",
+                  )}
+                />
+              </div>
+              <p className="mt-1 truncate font-mono text-[9px] text-muted">
+                {FUZZ_LABEL[session.status]}
+              </p>
+              {session.final_loss != null && session.initial_loss != null && (
+                <p className="mt-0.5 font-mono text-[9px] text-muted/80">
+                  loss {session.initial_loss.toFixed(2)} → {session.final_loss.toFixed(2)}
+                </p>
+              )}
+              <p className="mt-0.5 truncate font-mono text-[9px] text-muted/60">
+                {session.generated_payload ?? session.seed}
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -339,7 +414,7 @@ function SessionConsole({
               {session.technique_id} · {session.technique_name}
             </p>
             <p className="truncate font-mono text-[10px] text-muted">
-              {session.fixture_url}
+              Target Execution
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5">
@@ -489,54 +564,66 @@ function BrowserViewport({
           <span className="h-2 w-2 rounded-full bg-[var(--status-safe)]/70" />
         </span>
         <div className="min-w-0 flex-1 truncate rounded bg-black/60 px-2 py-1 font-mono text-[10px] text-muted">
-          {session.fixture_url}
+          Target Execution
         </div>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
-        <div
-          className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-full border",
-            session.status === "running"
-              ? "border-accent/50 bg-accent/10 text-accent animate-pulse-orange"
-              : session.status === "evaluating"
-                ? "border-[var(--accent-orange)]/40 bg-[var(--accent-orange)]/10 text-[var(--accent-orange)]"
-                : "border-white/15 bg-black/40 text-muted",
-          )}
-        >
-          <ActiveIcon size={24} />
-        </div>
-        <div>
-          <p className="font-mono text-xs text-foreground/90">
-            {activeStep?.label ?? "Waiting to start"}
-          </p>
-          <p className="mt-1 font-mono text-[10px] text-muted">
-            {session.status === "running"
-              ? `Browserbase executing step ${completed + 1} of ${total || "?"}`
-              : session.status === "evaluating"
-                ? "Browser finished — ARiES scoring in progress"
-                : session.status === "queued"
-                  ? "Queued for verification worker"
-                  : session.status === "completed"
-                    ? "Browser run finished"
-                    : "Session error"}
-          </p>
-        </div>
-        {total > 0 && (
-          <div className="flex items-center gap-1.5">
-            {session.steps.map((step) => (
-              <span
-                key={step.index}
-                className={cn(
-                  "h-2 w-2 rounded-full transition-colors",
-                  step.status === "completed" && "bg-[var(--status-safe)]",
-                  step.status === "running" && "bg-accent animate-pulse-orange",
-                  step.status === "error" && "bg-[var(--status-vulnerable)]",
-                  step.status === "pending" && "bg-white/15",
-                )}
-              />
-            ))}
-          </div>
+        {session.session_id ? (
+          <iframe
+            title="Browserbase Live View"
+            src={`https://www.browserbase.com/sessions/${session.session_id}/debug`}
+            className="h-full w-full rounded border border-white/10 bg-black/50"
+            allow="clipboard-read; clipboard-write"
+            sandbox="allow-same-origin allow-scripts allow-forms"
+          />
+        ) : (
+          <>
+            <div
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-full border",
+                session.status === "running"
+                  ? "border-accent/50 bg-accent/10 text-accent animate-pulse-orange"
+                  : session.status === "evaluating"
+                    ? "border-[var(--accent-orange)]/40 bg-[var(--accent-orange)]/10 text-[var(--accent-orange)]"
+                    : "border-white/15 bg-black/40 text-muted",
+              )}
+            >
+              <ActiveIcon size={24} />
+            </div>
+            <div>
+              <p className="font-mono text-xs text-foreground/90">
+                {activeStep?.label ?? "Waiting to start"}
+              </p>
+              <p className="mt-1 font-mono text-[10px] text-muted">
+                {session.status === "running"
+                  ? `Browserbase executing step ${completed + 1} of ${total || "?"}`
+                  : session.status === "evaluating"
+                    ? "Browser finished — ARiES scoring in progress"
+                    : session.status === "queued"
+                      ? "Queued for verification worker"
+                      : session.status === "completed"
+                        ? "Browser run finished"
+                        : "Session error"}
+              </p>
+            </div>
+            {total > 0 && (
+              <div className="flex items-center gap-1.5">
+                {session.steps.map((step) => (
+                  <span
+                    key={step.index}
+                    className={cn(
+                      "h-2 w-2 rounded-full transition-colors",
+                      step.status === "completed" && "bg-[var(--status-safe)]",
+                      step.status === "running" && "bg-accent animate-pulse-orange",
+                      step.status === "error" && "bg-[var(--status-vulnerable)]",
+                      step.status === "pending" && "bg-white/15",
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

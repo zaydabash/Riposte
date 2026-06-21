@@ -33,9 +33,11 @@ class Settings(BaseSettings):
         default="https://api.tokenrouter.com/v1", alias="MINIMAX_BASE_URL"
     )
     minimax_model: str = Field(default="MiniMax-M3", alias="MINIMAX_MODEL")
-    # Embeddings (embo-01) require a GroupId; when absent we fall back to a
-    # deterministic local embedding so the math pipeline still runs offline.
+    minimax_embedding_model: str = Field(default="embo-01", alias="MINIMAX_EMBEDDING_MODEL")
+    # Native MiniMax embeddings may require GroupId. TokenRouter's OpenAI-compatible
+    # route does not, so this is optional metadata instead of an enablement gate.
     minimax_group_id: str | None = Field(default=None, alias="MINIMAX_GROUP_ID")
+    embedding_backend: str = Field(default="local", alias="EMBEDDING_BACKEND")
     embedding_dim: int = Field(default=512, alias="EMBEDDING_DIM")
 
     # --- Browserbase / Stagehand (execution arm) ---
@@ -62,7 +64,7 @@ class Settings(BaseSettings):
     github_token: str | None = Field(default=None, alias="GITHUB_TOKEN")
 
     # --- Pipeline knobs ---
-    max_concurrent_sessions: int = Field(default=10, alias="MAX_CONCURRENT_SESSIONS")
+    max_concurrent_sessions: int = Field(default=15, alias="MAX_CONCURRENT_SESSIONS")
     fuzzer_workers: int = Field(default=2, alias="FUZZER_WORKERS")
     offensive_workers: int = Field(default=3, alias="OFFENSIVE_WORKERS")
     eval_workers: int = Field(default=2, alias="EVAL_WORKERS")
@@ -79,12 +81,19 @@ class Settings(BaseSettings):
     aries_critical_threshold: float = Field(
         default=75.0, alias="ARIES_CRITICAL_THRESHOLD"
     )
+    aries_weight_m: float = Field(default=0.35, alias="ARIES_WEIGHT_M")
+    aries_weight_l: float = Field(default=0.35, alias="ARIES_WEIGHT_L")
+    aries_weight_a: float = Field(default=0.20, alias="ARIES_WEIGHT_A")
+    aries_weight_j: float = Field(default=0.10, alias="ARIES_WEIGHT_J")
+    aries_leak_doc_threshold: float = Field(
+        default=50.0, alias="ARIES_LEAK_DOC_THRESHOLD"
+    )
+    minimax_judge_ensemble_size: int = Field(
+        default=3, alias="MINIMAX_JUDGE_ENSEMBLE_SIZE"
+    )
     max_input_chars: int = Field(default=20000, alias="MAX_INPUT_CHARS")
 
     # --- Continuous verification plane ---
-    fixture_server_url: str = Field(
-        default="http://127.0.0.1:8000/fixtures", alias="FIXTURE_SERVER_URL"
-    )
     scenario_workers: int = Field(default=2, alias="SCENARIO_WORKERS")
     verification_workers: int = Field(default=3, alias="VERIFICATION_WORKERS")
     scenario_mutation_steps: int = Field(default=4, alias="SCENARIO_MUTATION_STEPS")

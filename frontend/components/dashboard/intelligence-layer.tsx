@@ -38,11 +38,14 @@ export function IntelligenceLayer({
   );
 
   const panelClass = cn("panel-hover-glow", compact ? "p-3" : "p-6");
-  const stackClass = compact ? "space-y-2" : "space-y-8";
+  const stackClass = compact
+    ? "flex h-full min-h-0 flex-col gap-2 overflow-hidden"
+    : "space-y-8";
+  const scrollClass = "min-h-0 overflow-y-auto overscroll-contain";
 
   return (
     <div className={stackClass}>
-      <GlassPanel className={panelClass}>
+      <GlassPanel className={cn(panelClass, compact && "shrink-0")}>
         <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
           Global ARiES
         </p>
@@ -62,8 +65,18 @@ export function IntelligenceLayer({
         </p>
       </GlassPanel>
 
-      <GlassPanel className={panelClass}>
-        <div className={cn("flex items-center gap-1.5", compact ? "mb-1" : "mb-4")}>
+      <GlassPanel
+        className={cn(
+          panelClass,
+          compact && "flex min-h-0 flex-1 flex-col overflow-hidden",
+        )}
+      >
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1.5",
+            compact ? "mb-1" : "mb-4",
+          )}
+        >
           <ShieldAlert size={compact ? 13 : 16} className="text-accent" />
           <h3 className={cn(compact ? "text-xs" : "text-sm", "text-foreground/90")}>
             Risk Alert Feed
@@ -72,7 +85,13 @@ export function IntelligenceLayer({
         {alerts.length === 0 ? (
           <p className="font-mono text-[10px] text-muted">No alerts.</p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul
+            className={cn(
+              "space-y-1.5 pr-0.5",
+              scrollClass,
+              compact ? "flex-1" : "max-h-64",
+            )}
+          >
             {alerts.map((alert) => (
               <li
                 key={alert.id}
@@ -100,8 +119,13 @@ export function IntelligenceLayer({
         )}
       </GlassPanel>
 
-      <GlassPanel className={panelClass}>
-        <div className={cn("flex items-center gap-1.5", compact ? "mb-1" : "mb-4")}>
+      <GlassPanel className={cn(panelClass, compact && "shrink-0")}>
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1.5",
+            compact ? "mb-1" : "mb-4",
+          )}
+        >
           <Wrench size={compact ? 13 : 16} className="text-accent" />
           <h3 className={cn(compact ? "text-xs" : "text-sm", "text-foreground/90")}>
             Remediation Queue
@@ -112,7 +136,13 @@ export function IntelligenceLayer({
             No repair proposals yet. Critical control failures trigger HITL PRs and re-verification.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul
+            className={cn(
+              "space-y-2 pr-0.5",
+              scrollClass,
+              compact ? "max-h-24" : "max-h-48",
+            )}
+          >
             {remediations.map((r) => (
               <li
                 key={remediationKey(r)}

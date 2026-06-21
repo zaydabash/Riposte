@@ -26,7 +26,7 @@ async def fuzz_worker(
     fuzzer: AdversarialFuzzer,
     executor: TargetExecutor,
     semaphore: asyncio.Semaphore,
-    on_payload: Callable[[FuzzTask, OptimizationResult], Awaitable[None]],
+    on_payload: Callable[[FuzzTask, OptimizationResult | None], Awaitable[None]],
     shutdown_event: asyncio.Event,
 ) -> None:
     while not shutdown_event.is_set():
@@ -40,6 +40,7 @@ async def fuzz_worker(
             break
 
         try:
+            await on_payload(task, None)
             query_fn = _make_query_fn(executor, task, semaphore)
             result = await fuzzer.optimize(task.seed, query_fn)
             await on_payload(task, result)
@@ -49,6 +50,7 @@ async def fuzz_worker(
                     target_url=task.target_url,
                     payload=result.payload,
                     repo_url=task.repo_url,
+                    task_id=task.task_id,
                 )
             )
             logger.info(
@@ -61,8 +63,11 @@ async def fuzz_worker(
             # Degrade to the raw seed so the audit still progresses.
             await attack_queue.put(
                 AttackTask(
-                    audit_id=task.audit_id, target_url=task.target_url,
-                    payload=task.seed, repo_url=task.repo_url,
+                    audit_id=task.audit_id,
+                    target_url=task.target_url,
+                    payload=task.seed,
+                    repo_url=task.repo_url,
+                    task_id=task.task_id,
                 )
             )
         finally:

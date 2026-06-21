@@ -48,6 +48,7 @@ class RemediationRunner:
             return RemediationResult(
                 audit_id=task.audit_id,
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 payload=task.payload,
                 aries_score=task.aries_score,
                 status="unavailable",
@@ -65,6 +66,7 @@ class RemediationRunner:
             return RemediationResult(
                 audit_id=task.audit_id,
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 payload=task.payload,
                 aries_score=task.aries_score,
                 status="failed",
@@ -77,9 +79,7 @@ class RemediationRunner:
         repo_full_name = extract_repo_full_name(task.repo_url)
         base_branch = await self._github.get_default_branch(repo_full_name)
         
-        # We don't have the explicit route in the RemediationTask, 
-        # but we use the generic route mapping fallback.
-        candidates = route_to_file_candidates("")
+        candidates = route_to_file_candidates(task.target_url or "")
         
         file_path = None
         original_content = None
@@ -132,6 +132,7 @@ class RemediationRunner:
         return RemediationResult(
             audit_id=task.audit_id,
             repo_url=task.repo_url,
+            target_url=task.target_url,
             payload=task.payload,
             aries_score=task.aries_score,
             status="pr_created",

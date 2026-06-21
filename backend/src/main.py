@@ -48,9 +48,6 @@ def create_app() -> FastAPI:
         version="2.0.0",
         lifespan=lifespan,
     )
-    fixtures_dir = Path(__file__).resolve().parent / "scenarios" / "fixtures"
-    if fixtures_dir.is_dir():
-        app.mount("/fixtures", StaticFiles(directory=str(fixtures_dir)), name="fixtures")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

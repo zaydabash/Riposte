@@ -192,7 +192,6 @@ describe("deriveActiveStage (conceptual overlay)", () => {
     return {
       technique_id: "T1189",
       technique_name: "Drive-by Compromise",
-      fixture_url: "http://127.0.0.1:8000/fixtures/t1189_driveby.html",
       live: false,
       current_step_index: 0,
       steps: [],

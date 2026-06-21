@@ -45,13 +45,18 @@ evidence search informs regression prioritization when Stack is available.
 | Track | Where | When unconfigured |
 |-------|-------|-------------------|
 | **Browserbase / Stagehand** | `workers/verification_worker.py`, `workers/offensive_worker.py` | Verification/execution returns error (`live=False`) |
-| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Deterministic judge stand-in |
+| **MiniMax-M3** | `services/minimax_client.py`, `services/eval_service.py` | Evaluation returns an error finding |
 | **Sentry** | `core/telemetry.py` | Errors logged locally |
 | **Redis Stack** | `repositories/vector_repo.py` | Vector memory skipped |
 | **Anthropic / Claude Code** | `workers/patch_worker.py` | Remediation status `unavailable` |
 
-Browserbase and Claude Code are required for live verification and HITL repair
-respectively; other integrations degrade gracefully.
+TokenRouter's OpenAI-compatible MiniMax route is supported through
+`MINIMAX_BASE_URL=https://api.tokenrouter.com/v1`; `MINIMAX_GROUP_ID` is only
+needed for native MiniMax embedding routes that require it.
+
+Browserbase, MiniMax, and Claude Code are required for live verification,
+ARiES judging, and HITL repair respectively; optional Redis/Sentry integrations
+degrade gracefully.
 
 ## Quick start
 

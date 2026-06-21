@@ -34,7 +34,7 @@ def test_start_audit_returns_running_state(client):
     assert resp.status_code == 202
     body = resp.json()
     assert body["status"] == "running"
-    assert body["queued_payloads"] == 3
+    assert body["queued_payloads"] == 6
     audit_id = body["audit_id"]
 
     got = client.get(f"/api/v1/audit/{audit_id}")

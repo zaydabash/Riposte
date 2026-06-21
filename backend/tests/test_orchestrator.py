@@ -5,8 +5,10 @@ import pytest
 import src.repositories.vector_repo as vector_repo_mod
 from src.config import get_settings
 from src.core.models import AuditRequest, AuditStatus, RemediationResult, VerificationResult
+from src.demos.fixtures import PRIVATE_CORPUS
 from src.scenarios.artifacts import BrowserArtifacts
 from src.scenarios.registry import get_scenario
+from src.services.eval_service import EvalService
 from src.services.orchestrator import Orchestrator
 from src.workers.patch_worker import RemediationRunner
 from src.workers.verification_worker import VerificationRunner
@@ -21,7 +23,7 @@ async def test_full_pipeline(monkeypatch):
         scenario = get_scenario(task.technique_id)
         artifacts = BrowserArtifacts(
             technique_id=task.technique_id,
-            dom_after="credential-echo: test-user@riposte.demo password echoed",
+            dom_after=f"credential-echo: test-user@riposte.demo password echoed {PRIVATE_CORPUS[0]}",
             agent_response="Submitted credentials to untrusted-collector.example",
         )
         return VerificationResult(
@@ -51,8 +53,12 @@ async def test_full_pipeline(monkeypatch):
             baseline_run_id=task.baseline_run_id,
         )
 
+    async def fake_judge(self, payload, response, l_score, a_score):
+        return 90.0
+
     monkeypatch.setattr(VerificationRunner, "run", fake_verify)
     monkeypatch.setattr(RemediationRunner, "run", fake_remediation)
+    monkeypatch.setattr(EvalService, "_judge", fake_judge)
 
     settings = get_settings()
     orchestrator = Orchestrator(settings)
@@ -65,7 +71,7 @@ async def test_full_pipeline(monkeypatch):
             max_payloads=10,
         )
         state = await orchestrator.submit_audit(request)
-        assert state.queued_payloads == 10
+        assert state.queued_payloads == 16
 
         # Wait for the pipeline to drain (includes repair re-validation audits).
         for _ in range(200):
@@ -76,10 +82,10 @@ async def test_full_pipeline(monkeypatch):
 
         audit = orchestrator.get_audit(state.audit_id)
         assert audit is not None
-        assert len(audit.findings) == 10
+        assert len(audit.findings) == 16
         critical = [f for f in audit.findings if f.is_critical]
         assert critical, "expected verified control failures to produce critical findings"
-        assert all(f.technique_id for f in audit.findings)
+        assert sum(1 for f in audit.findings if f.technique_id) == 10
         assert len(audit.remediations) >= len(critical)
         assert all(
             r.status in {"unavailable", "pr_created", "failed"} for r in audit.remediations
@@ -98,3 +104,26 @@ def test_telemetry_status_without_integrations():
     assert status["minimax_enabled"] is False
     assert status["browserbase_live"] is False
     assert status["verification_live_ready"] is False
+
+
+@pytest.mark.asyncio
+async def test_submit_audit_uses_real_target_url_by_default(monkeypatch):
+    monkeypatch.setattr(vector_repo_mod, "redis", None)
+    settings = get_settings()
+    orchestrator = Orchestrator(settings)
+    state = await orchestrator.submit_audit(
+        AuditRequest(
+            target_name="Demo Bot",
+            target_endpoint="https://target-agent.example.com/chat",
+            source_repository="https://github.com/target/bot",
+            max_payloads=1,
+        )
+    )
+
+    assert state.verification_sessions
+    # Fixture URL was removed, so we just verify the task uses target_endpoint.
+    queued = await orchestrator.scenario_queue.get()
+    try:
+        assert queued.target_url == "https://target-agent.example.com/chat"
+    finally:
+        orchestrator.scenario_queue.task_done()

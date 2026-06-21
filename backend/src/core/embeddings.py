@@ -2,7 +2,7 @@
 
 Priority order:
 
-1. **MiniMax ``embo-01``** — real semantic embeddings (requires a ``GroupId``).
+1. **MiniMax ``embo-01``** — real semantic embeddings through TokenRouter or native MiniMax.
 2. **spaCy GloVe vectors** (``en_core_web_md``) — real 300-d semantic embeddings,
    CPU-only, no network. This makes the ARiES anomaly + leakage math meaningful.
 3. **Feature hashing** — deterministic last-resort fallback (the "hashing trick")
@@ -71,6 +71,7 @@ class EmbeddingProvider:
         else:
             self.dim = settings.embedding_dim
             self._backend = "hashing"
+        self._scoring_dim: int | None = None
 
     @property
     def backend(self) -> str:
@@ -78,7 +79,10 @@ class EmbeddingProvider:
 
     @property
     def is_remote(self) -> bool:
-        return bool(self._settings.minimax_group_id and self._settings.minimax_api_key)
+        return (
+            self._settings.embedding_backend.lower() == "remote"
+            and bool(self._settings.minimax_api_key)
+        )
 
     def embed(self, text: str) -> np.ndarray:
         """Synchronous local embedding used by the math core."""
@@ -93,6 +97,31 @@ class EmbeddingProvider:
         except Exception:
             # Never fail the pipeline on an embedding hiccup; telemetry captures it.
             return self._local_embed(text)
+
+    async def embed_for_scoring(self, text: str) -> np.ndarray:
+        """Embedding used by ARiES scoring and vector indexes.
+
+        This single method is used for the benign baseline, private corpus,
+        response text, sentence scoring, and evidence memory so those vectors all
+        live in the same space.
+        """
+        if self.is_remote:
+            return await self._minimax_embed(text)
+        return self._local_embed(text)
+
+    async def embed_many_for_scoring(self, texts: list[str]) -> list[np.ndarray]:
+        """Batch version of :meth:`embed_for_scoring` with the same backend."""
+        if not texts:
+            return []
+        if self.is_remote:
+            return await self._minimax_embed_many(texts)
+        return [self._local_embed(text) for text in texts]
+
+    async def scoring_dim(self) -> int:
+        """Return the active ARiES/vector-memory embedding dimension."""
+        if self._scoring_dim is None:
+            self._scoring_dim = int((await self.embed_for_scoring("riposte dimension probe")).shape[0])
+        return self._scoring_dim
 
     def _local_embed(self, text: str) -> np.ndarray:
         if self._nlp is not None:
@@ -110,18 +139,55 @@ class EmbeddingProvider:
         return _normalize(vec)
 
     async def _minimax_embed(self, text: str) -> np.ndarray:
+        return (await self._minimax_embed_many([text]))[0]
+
+    async def _minimax_embed_many(self, texts: list[str]) -> list[np.ndarray]:
         url = self._settings.minimax_base_url.rstrip("/") + "/embeddings"
-        params = {"GroupId": self._settings.minimax_group_id}
+        params = (
+            {"GroupId": self._settings.minimax_group_id}
+            if self._settings.minimax_group_id
+            else None
+        )
         headers = {"Authorization": f"Bearer {self._settings.minimax_api_key}"}
-        body = {"model": "embo-01", "texts": [text], "type": "query"}
+        if self._settings.minimax_group_id:
+            body = {
+                "model": self._settings.minimax_embedding_model,
+                "texts": texts,
+                "type": "query",
+            }
+        else:
+            body = {"model": self._settings.minimax_embedding_model, "input": texts}
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(url, params=params, headers=headers, json=body)
             resp.raise_for_status()
             data = resp.json()
-        vectors = data.get("vectors") or []
-        if not vectors:
-            return self._local_embed(text)
-        return _normalize(np.asarray(vectors[0], dtype=np.float64))
+        vectors = _extract_embedding_vectors(data)
+        if len(vectors) != len(texts):
+            raise ValueError("MiniMax embedding response did not contain a vector")
+        return [_normalize(np.asarray(vector, dtype=np.float64)) for vector in vectors]
+
+
+def _extract_embedding_vectors(data: dict) -> list[list[float]]:
+    """Read either OpenAI-compatible or native MiniMax embedding responses."""
+    openai_items = data.get("data")
+    if isinstance(openai_items, list):
+        ordered = sorted(
+            openai_items,
+            key=lambda item: item.get("index", 0) if isinstance(item, dict) else 0,
+        )
+        vectors = [
+            item.get("embedding")
+            for item in ordered
+            if isinstance(item, dict) and isinstance(item.get("embedding"), list)
+        ]
+        if len(vectors) == len(openai_items):
+            return vectors
+
+    vectors = data.get("vectors")
+    if isinstance(vectors, list) and all(isinstance(vector, list) for vector in vectors):
+        return vectors
+
+    return []
 
 
 def split_sentences(text: str) -> list[str]:

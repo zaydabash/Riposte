@@ -27,7 +27,7 @@ const integrationLoops: {
     title: "Browser Verification",
     partners: "Browserbase & Stagehand",
     description:
-      "ATT&CK-keyed scenarios run in controlled browser fixtures. Stagehand executes declarative verification steps via structured DOM actions, captures artifact evidence, and never prompt-injects the testing agent.",
+      "ATT&CK-keyed scenarios run against the configured target. Stagehand executes declarative verification steps via structured DOM actions, captures artifact evidence, and never prompt-injects the testing agent.",
     formula: "tAdv",
   },
   {

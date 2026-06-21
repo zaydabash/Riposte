@@ -26,15 +26,15 @@ class TargetExecutor:
 
     async def execute(self, task: AttackTask) -> AttackResult:
         if not self._settings.browserbase_live:
-            from src.core.simulator import simulate_target_response
-            response = simulate_target_response(task.payload, self._private_corpus)
             return AttackResult(
                 audit_id=task.audit_id,
                 task_id=task.task_id,
                 payload=task.payload,
-                response=response,
+                response="",
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 live=False,
+                error="Browserbase credentials are required for live target execution.",
             )
 
         try:
@@ -45,6 +45,7 @@ class TargetExecutor:
                 payload=task.payload,
                 response=reply,
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 live=True,
             )
         except Exception as exc:
@@ -55,6 +56,7 @@ class TargetExecutor:
                 payload=task.payload,
                 response="",
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 live=False,
                 error=str(exc)[:500],
             )

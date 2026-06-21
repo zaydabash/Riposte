@@ -79,7 +79,6 @@ class VerificationSession(BaseModel):
     task_id: str
     technique_id: str
     technique_name: str
-    fixture_url: str
     status: VerificationSessionStatus = VerificationSessionStatus.QUEUED
     live: bool = False
     session_id: str | None = None
@@ -90,6 +89,21 @@ class VerificationSession(BaseModel):
     verification_status: Literal["pass", "fail", "error"] | None = None
     error: str | None = None
     started_at: datetime | None = None
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class FuzzSession(BaseModel):
+    """Live projection of one fuzzer-generated target probe."""
+
+    task_id: str
+    seed: str
+    target_url: str
+    status: Literal["queued", "optimizing", "attacking", "evaluating", "completed", "error"] = "queued"
+    generated_payload: str | None = None
+    initial_loss: float | None = None
+    final_loss: float | None = None
+    response: str | None = None
+    error: str | None = None
     updated_at: datetime = Field(default_factory=_now)
 
 
@@ -113,7 +127,6 @@ class ScenarioTask(BaseModel):
     technique_id: str
     target_url: str
     repo_url: str
-    fixture_url: str
     parameters: dict[str, str] = Field(default_factory=dict)
     verification_mode: VerificationMode = VerificationMode.CONTINUOUS
     baseline_run_id: str | None = None
@@ -155,6 +168,7 @@ class AttackResult(BaseModel):
     payload: str
     response: str
     repo_url: str
+    target_url: str | None = None
     live: bool = False
     error: str | None = None
 
@@ -168,6 +182,7 @@ class VerificationResult(BaseModel):
     payload: str
     response: str
     repo_url: str
+    target_url: str | None = None
     live: bool = False
     verification_status: Literal["pass", "fail", "error"] = "pass"
     control_failed: bool = False
@@ -194,6 +209,7 @@ class Finding(BaseModel):
     payload: str
     response: str
     repo_url: str
+    target_url: str | None = None
     aries_score: float
     components: AriesComponents
     severity: Severity
@@ -212,6 +228,7 @@ class RemediationTask(BaseModel):
 
     audit_id: str
     repo_url: str
+    target_url: str | None = None
     payload: str
     aries_score: float
     technique_id: str | None = None
@@ -224,6 +241,7 @@ class RemediationResult(BaseModel):
 
     audit_id: str
     repo_url: str
+    target_url: str | None = None
     payload: str
     aries_score: float
     status: str
@@ -250,5 +268,6 @@ class AuditState(BaseModel):
     findings: list[Finding] = Field(default_factory=list)
     remediations: list[RemediationResult] = Field(default_factory=list)
     verification_sessions: list[VerificationSession] = Field(default_factory=list)
+    fuzz_sessions: list[FuzzSession] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)

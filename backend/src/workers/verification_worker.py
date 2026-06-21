@@ -56,35 +56,15 @@ class VerificationRunner:
         payload_label = f"{task.technique_id}: {scenario.technique_name}"
 
         if not self._settings.browserbase_live:
-            from src.core.simulator import simulate_target_response
-            from src.demos.fixtures import PRIVATE_CORPUS
-            
-            response = simulate_target_response(task.payload, list(PRIVATE_CORPUS))
-            artifacts = BrowserArtifacts(
-                technique_id=task.technique_id,
-                dom_after=response,
-                agent_response=response,
-            )
-            control_failed = scenario.evaluate_control_failure(artifacts)
-            
-            result = VerificationResult(
-                audit_id=task.audit_id,
-                task_id=task.task_id,
-                technique_id=task.technique_id,
-                payload=payload_label,
-                response=response,
-                repo_url=task.repo_url,
-                live=False,
-                verification_status="fail" if control_failed else "pass",
-                control_failed=control_failed,
-                artifacts=artifacts,
-                verification_mode=task.verification_mode,
-                baseline_run_id=task.baseline_run_id,
+            result = _error_result(
+                task,
+                payload_label,
+                "Browserbase credentials are required for live verification.",
             )
             await _emit(
                 on_progress,
                 task,
-                session_status=VerificationSessionStatus.COMPLETED,
+                session_status=VerificationSessionStatus.ERROR,
                 live=False,
                 result=result,
             )
@@ -100,6 +80,7 @@ class VerificationRunner:
                 payload=payload_label,
                 response=artifacts.agent_response or artifacts.dom_after,
                 repo_url=task.repo_url,
+                target_url=task.target_url,
                 live=True,
                 verification_status="fail" if control_failed else "pass",
                 control_failed=control_failed,
@@ -139,7 +120,6 @@ class VerificationRunner:
     ):
         from stagehand import AsyncStagehand
 
-        fixture_url = scenario.fixture_url(self._settings.fixture_server_url)
         client = AsyncStagehand(
             browserbase_api_key=self._settings.browserbase_api_key,
             browserbase_project_id=self._settings.browserbase_project_id,
@@ -169,7 +149,6 @@ class VerificationRunner:
                     session,
                     task,
                     scenario,
-                    fixture_url,
                     step,
                 )
                 if step.action == "snapshot" and extracted:
@@ -198,12 +177,12 @@ class VerificationRunner:
         session,
         task: ScenarioTask,
         scenario: TechniqueScenario,
-        fixture_url: str,
         step: BrowserStep,
     ) -> tuple[str, str]:
         if step.action == "navigate":
-            await session.navigate(url=fixture_url)
-            return f"Navigated to {fixture_url}", ""
+            # Navigate to target
+            await session.navigate(url=task.target_url)
+            return f"Navigated to {task.target_url}", ""
 
         if step.action == "fill" and step.selector:
             value = _resolve_fill_value(step, task, scenario)
@@ -294,6 +273,7 @@ def _error_result(task: ScenarioTask, payload: str, error: str) -> VerificationR
         payload=payload,
         response="",
         repo_url=task.repo_url,
+        target_url=task.target_url,
         live=False,
         verification_status="error",
         control_failed=False,

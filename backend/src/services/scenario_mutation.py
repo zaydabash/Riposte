@@ -36,7 +36,9 @@ class ScenarioMutationService:
         try:
             from src.core.embeddings import EmbeddingProvider
 
-            emb = EmbeddingProvider(self._settings).embed(scenario.technique_id)
+            emb = await EmbeddingProvider(self._settings).embed_for_scoring(
+                scenario.technique_id
+            )
             hits = await self._vector_repo.search_similar_evidence(emb, k=3)
             if hits:
                 logger.debug(

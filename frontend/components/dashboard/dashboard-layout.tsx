@@ -74,7 +74,7 @@ export function DashboardLayout(props: DashboardLayoutProps) {
           />
         </section>
 
-        <aside className="lg:col-span-3 lg:col-start-10 lg:row-start-1">
+        <aside className="flex h-full min-h-0 flex-col lg:col-span-3 lg:col-start-10 lg:row-start-1">
           <div id="section-aries" />
           <div id="section-alerts" />
           <div id="section-remediation" />

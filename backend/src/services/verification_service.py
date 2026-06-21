@@ -15,7 +15,7 @@ from src.core.models import (
 )
 from src.repositories.vector_repo import VectorRepository
 from src.scenarios.registry import get_scenario
-from src.services.eval_service import EvalService, W_A, W_J, W_L, W_M, attack_success_score, severity_for
+from src.services.eval_service import EvalService, attack_success_score, severity_for
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ class VerificationService:
             payload=result.payload,
             response=eval_text,
             repo_url=result.repo_url,
+            target_url=result.target_url,
             live=result.live,
         )
         base = await self._eval_service.evaluate(attack_result)
@@ -73,10 +74,10 @@ class VerificationService:
             a_score = min(base.components.A, 15.0)
 
         aries = (
-            (W_M * base.components.M)
-            + (W_L * base.components.L)
-            + (W_A * a_score)
-            + (W_J * base.components.J)
+            (self._settings.aries_weight_m * base.components.M)
+            + (self._settings.aries_weight_l * base.components.L)
+            + (self._settings.aries_weight_a * a_score)
+            + (self._settings.aries_weight_j * base.components.J)
         )
         aries = float(round(aries, 2))
         is_critical = aries >= self._settings.aries_critical_threshold
@@ -93,6 +94,7 @@ class VerificationService:
             payload=result.payload,
             response=eval_text or result.response,
             repo_url=result.repo_url,
+            target_url=result.target_url,
             aries_score=aries,
             components=AriesComponents(
                 M=base.components.M,
@@ -118,7 +120,7 @@ class VerificationService:
             f"{result.artifacts.summary()}"
         )
         try:
-            emb = self._embeddings.embed(summary)
+            emb = await self._embeddings.embed_for_scoring(summary)
             await self._vector_repo.index_evidence(
                 f"{result.audit_id}:{result.task_id}",
                 summary,

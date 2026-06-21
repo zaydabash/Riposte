@@ -54,6 +54,7 @@ async def eval_worker(
                     RemediationTask(
                         audit_id=finding.audit_id,
                         repo_url=finding.repo_url,
+                        target_url=finding.target_url,
                         payload=finding.payload,
                         aries_score=finding.aries_score,
                         technique_id=finding.technique_id,
@@ -75,14 +76,30 @@ async def eval_worker(
                     payload=result.payload,
                     response=result.response,
                     repo_url=result.repo_url,
-                    aries_score=50.0,
-                    components=AriesComponents(M=0, L=0, A=50, J=0),
-                    severity=Severity.MEDIUM,
+                    target_url=result.target_url,
+                    aries_score=0.0,
+                    components=AriesComponents(M=0, L=0, A=0, J=0),
+                    severity=Severity.SAFE,
                     is_critical=False,
                     technique_id=result.technique_id,
                     artifacts_summary=result.artifacts.summary(),
                     control_failed=result.control_failed,
-                    detail=str(exc)[:500],
+                    detail=f"Evaluation failed: {str(exc)[:480]}",
+                )
+                await on_finding(finding)
+            elif isinstance(result, AttackResult):
+                finding = Finding(
+                    audit_id=result.audit_id,
+                    task_id=result.task_id,
+                    payload=result.payload,
+                    response=result.response,
+                    repo_url=result.repo_url,
+                    target_url=result.target_url,
+                    aries_score=0.0,
+                    components=AriesComponents(M=0, L=0, A=0, J=0),
+                    severity=Severity.SAFE,
+                    is_critical=False,
+                    detail=f"Evaluation failed: {str(exc)[:480]}",
                 )
                 await on_finding(finding)
         finally:
