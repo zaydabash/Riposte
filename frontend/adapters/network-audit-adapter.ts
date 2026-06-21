@@ -14,6 +14,7 @@ import type {
   HealthResponse,
   RiposteAuditState,
 } from "@/lib/backend-types";
+import { corpusLinesToList } from "@/lib/corpus-text";
 import type {
   AuditConfig,
   AuditService,
@@ -60,7 +61,12 @@ export class NetworkAuditAdapter implements AuditService {
           throw new Error(`Poll failed (${res.status}): ${await safeText(res)}`);
         }
         const snapshot = (await res.json()) as RiposteAuditState;
-        if (!stopped) onUpdate(snapshot);
+        if (!stopped) {
+          onUpdate(snapshot);
+          if (snapshot.status === "completed" || snapshot.status === "failed") {
+            cleanup();
+          }
+        }
       } catch (err) {
         if (!isAbort(err) && !stopped) onError(toError(err));
       }
@@ -74,6 +80,8 @@ export class NetworkAuditAdapter implements AuditService {
           source_repository: config.sourceRepository,
           interface_type: "web-ui",
           max_payloads: config.maxPayloads,
+          private_corpus: [...corpusLinesToList(config.privateCorpusText)],
+          benign_baseline: [...corpusLinesToList(config.benignBaselineText)],
         };
         const res = await fetch(joinUrl(config.apiBaseUrl, "/api/v1/audit/start"), {
           method: "POST",

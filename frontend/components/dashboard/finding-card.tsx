@@ -4,9 +4,9 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, FileWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Finding } from "@/lib/backend-types";
-import { formatClock, formatScore } from "@/lib/format";
+import { formatClock } from "@/lib/format";
+import { AriesScoreBadge } from "@/components/dashboard/aries-score-badge";
 import { AriesBreakdown } from "@/components/dashboard/aries-breakdown";
-import { SeverityBadge } from "@/components/dashboard/severity-badge";
 
 interface FindingCardProps {
   finding: Finding;
@@ -44,10 +44,10 @@ export function FindingCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <SeverityBadge severity={finding.severity} />
-            <span className="font-mono text-xs text-foreground/90">
-              ARiES {formatScore(finding.aries_score)}
-            </span>
+            <AriesScoreBadge
+              score={finding.aries_score}
+              isCritical={finding.is_critical}
+            />
             {finding.technique_id && (
               <span className="font-mono text-[10px] text-accent">
                 {finding.technique_id}

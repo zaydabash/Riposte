@@ -5,25 +5,40 @@ import pytest
 import src.repositories.vector_repo as vector_repo_mod
 from src.config import get_settings
 from src.core.models import AuditRequest, AuditStatus, RemediationResult, VerificationResult
-from src.demos.fixtures import PRIVATE_CORPUS
 from src.scenarios.artifacts import BrowserArtifacts
 from src.scenarios.registry import get_scenario
 from src.services.eval_service import EvalService
 from src.services.orchestrator import Orchestrator
 from src.workers.patch_worker import RemediationRunner
 from src.workers.verification_worker import VerificationRunner
+from tests.sample_corpora import SAMPLE_BENIGN_BASELINE, SAMPLE_PRIVATE_CORPUS
+
+
+def _audit_request(**overrides) -> AuditRequest:
+    defaults = {
+        "target_name": "Demo Bot",
+        "target_endpoint": "https://target-agent.example.com",
+        "source_repository": "https://github.com/target/bot",
+        "max_payloads": 10,
+        "private_corpus": SAMPLE_PRIVATE_CORPUS,
+        "benign_baseline": SAMPLE_BENIGN_BASELINE,
+    }
+    defaults.update(overrides)
+    return AuditRequest(**defaults)
 
 
 @pytest.mark.asyncio
 async def test_full_pipeline(monkeypatch):
-    # Avoid any Redis network usage during the e2e run.
     monkeypatch.setattr(vector_repo_mod, "redis", None)
 
     async def fake_verify(self, task, on_progress=None):
         scenario = get_scenario(task.technique_id)
         artifacts = BrowserArtifacts(
             technique_id=task.technique_id,
-            dom_after=f"credential-echo: test-user@riposte.demo password echoed {PRIVATE_CORPUS[0]}",
+            dom_after=(
+                "credential-echo: test-user@riposte.demo password echoed "
+                f"{SAMPLE_PRIVATE_CORPUS[0]}"
+            ),
             agent_response="Submitted credentials to untrusted-collector.example",
         )
         return VerificationResult(
@@ -64,16 +79,9 @@ async def test_full_pipeline(monkeypatch):
     orchestrator = Orchestrator(settings)
     await orchestrator.start()
     try:
-        request = AuditRequest(
-            target_name="Demo Bot",
-            target_endpoint="https://target-agent.example.com",
-            source_repository="https://github.com/target/bot",
-            max_payloads=10,
-        )
-        state = await orchestrator.submit_audit(request)
-        assert state.queued_payloads == 16
+        state = await orchestrator.submit_audit(_audit_request())
+        assert state.queued_payloads == 20
 
-        # Wait for the pipeline to drain (includes repair re-validation audits).
         for _ in range(200):
             audit = orchestrator.get_audit(state.audit_id)
             if audit and audit.status == AuditStatus.COMPLETED:
@@ -82,7 +90,7 @@ async def test_full_pipeline(monkeypatch):
 
         audit = orchestrator.get_audit(state.audit_id)
         assert audit is not None
-        assert len(audit.findings) == 16
+        assert len(audit.findings) == 20
         critical = [f for f in audit.findings if f.is_critical]
         assert critical, "expected verified control failures to produce critical findings"
         assert sum(1 for f in audit.findings if f.technique_id) == 10
@@ -112,16 +120,13 @@ async def test_submit_audit_uses_real_target_url_by_default(monkeypatch):
     settings = get_settings()
     orchestrator = Orchestrator(settings)
     state = await orchestrator.submit_audit(
-        AuditRequest(
-            target_name="Demo Bot",
+        _audit_request(
             target_endpoint="https://target-agent.example.com/chat",
-            source_repository="https://github.com/target/bot",
             max_payloads=1,
         )
     )
 
     assert state.verification_sessions
-    # Fixture URL was removed, so we just verify the task uses target_endpoint.
     queued = await orchestrator.scenario_queue.get()
     try:
         assert queued.target_url == "https://target-agent.example.com/chat"

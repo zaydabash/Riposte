@@ -6,19 +6,23 @@ import { PixelBackground } from "@/components/backgrounds/PixelBackground";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { useAudit } from "@/hooks/use-audit";
 import type { AuditConfig } from "@/ports/audit-service";
-
-const DEFAULT_API_URL =
-  process.env.NEXT_PUBLIC_RIPOSTE_API_URL ?? "http://127.0.0.1:8000";
+import {
+  DEFAULT_MAX_PAYLOADS,
+  DEFAULT_POLLING_INTERVAL_MS,
+  defaultApiBaseUrl,
+} from "@/lib/riposte-config";
 
 /** Initial *form* values (user input state). The hook still validates on Start. */
 function initialConfig(): AuditConfig {
   return {
-    apiBaseUrl: DEFAULT_API_URL,
+    apiBaseUrl: defaultApiBaseUrl(),
     targetName: "",
     targetEndpoint: "",
     sourceRepository: "",
-    maxPayloads: 10,
-    pollingIntervalMs: 1000,
+    maxPayloads: DEFAULT_MAX_PAYLOADS,
+    pollingIntervalMs: DEFAULT_POLLING_INTERVAL_MS,
+    privateCorpusText: "",
+    benignBaselineText: "",
   };
 }
 

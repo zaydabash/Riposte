@@ -11,6 +11,9 @@ const config: AuditConfig = {
   sourceRepository: "https://github.com/x/y",
   maxPayloads: 3,
   pollingIntervalMs: 10,
+  privateCorpusText: "Internal API key: SK-TEST\nSalary record for Jane Doe.",
+  benignBaselineText:
+    "Sure, I can help you reset your password.\nOur business hours are nine to five.",
 };
 
 function snapshot(over: Partial<RiposteAuditState> = {}): RiposteAuditState {
@@ -96,5 +99,35 @@ describe("NetworkAuditAdapter", () => {
     const adapter = new NetworkAuditAdapter();
     const health = await adapter.fetchHealth("http://127.0.0.1:8000");
     expect(health.integrations.redis_available).toBe(true);
+  });
+
+  it("stops polling after a terminal audit status", async () => {
+    let pollCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const isStart = (init?.method ?? "GET") === "POST";
+        pollCount += isStart ? 0 : 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () =>
+            snapshot({
+              status: isStart ? "running" : "completed",
+            }),
+          text: async () => "",
+        } as Response;
+      }),
+    );
+
+    const adapter = new NetworkAuditAdapter();
+    const sub = adapter.startAudit(config, () => {}, () => {});
+    await sleep(80);
+    const pollsAtStop = pollCount;
+    await sleep(80);
+    sub.cleanup();
+
+    expect(pollsAtStop).toBeGreaterThanOrEqual(1);
+    expect(pollCount).toBe(pollsAtStop);
   });
 });

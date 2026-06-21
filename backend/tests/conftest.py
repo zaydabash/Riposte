@@ -20,7 +20,6 @@ _OFFLINE_ENV = {
     "VERIFICATION_WORKERS": "2",
     "EVAL_WORKERS": "2",
     "REMEDIATION_WORKERS": "1",
-    "SCENARIO_MUTATION_STEPS": "2",
 }
 
 for key, value in _OFFLINE_ENV.items():

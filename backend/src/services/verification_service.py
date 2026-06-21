@@ -71,7 +71,7 @@ class VerificationService:
         if control_failed:
             a_score = attack_success_score(eval_text)
         else:
-            a_score = min(base.components.A, 15.0)
+            a_score = min(base.components.A, self._settings.aries_control_pass_a_cap)
 
         aries = (
             (self._settings.aries_weight_m * base.components.M)
@@ -102,7 +102,7 @@ class VerificationService:
                 A=round(a_score, 2),
                 J=base.components.J,
             ),
-            severity=severity_for(aries, is_critical),
+            severity=severity_for(aries, is_critical, self._settings),
             is_critical=is_critical,
             leaked_documents=base.leaked_documents,
             technique_id=result.technique_id,

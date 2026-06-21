@@ -10,7 +10,9 @@ import {
   type Alert,
 } from "@/lib/audit-selectors";
 import { GlassPanel } from "@/components/ui/glass-panel";
+import { CRITICAL_ARIES_THRESHOLD } from "@/lib/riposte-config";
 import { formatClock, formatScore, SEVERITY_TEXT } from "@/lib/format";
+import { ariesBandTextClass } from "@/components/dashboard/aries-score-badge";
 
 interface IntelligenceLayerProps {
   state: RiposteAuditState | null;
@@ -61,7 +63,7 @@ export function IntelligenceLayer({
         <p className="mt-1 font-mono text-[10px] leading-snug text-muted">
           {global === null
             ? "No findings evaluated yet"
-            : "max(aries_score) · critical ≥ 75"}
+            : `Findings ranked by ARiES (0–100). Remediation triggers at ≥${CRITICAL_ARIES_THRESHOLD}.`}
         </p>
       </GlassPanel>
 
@@ -101,7 +103,9 @@ export function IntelligenceLayer({
                   <span
                     className={cn(
                       "font-mono text-[10px] tracking-wide",
-                      SEVERITY_TEXT[alert.severity],
+                      alert.ariesScore !== undefined
+                        ? ariesBandTextClass(alert.ariesScore)
+                        : SEVERITY_TEXT[alert.severity],
                     )}
                   >
                     {alert.title}

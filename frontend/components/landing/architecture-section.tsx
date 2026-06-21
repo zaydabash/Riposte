@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArchitectureDitherBackground } from "@/components/backgrounds/ArchitectureDitherBackground";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { MathFormula, type MathFormulaVariant } from "@/components/ui/math-formula";
+import { CRITICAL_ARIES_THRESHOLD } from "@/lib/riposte-config";
 import {
   ScrollReveal,
   ScrollRevealItem,
@@ -68,7 +69,7 @@ const pillars: {
     sponsor: "MiniMax",
     formula: "aries",
     description:
-      "Verification score combining behavioral anomaly, evidence leakage, control failure, and policy-compliance judges. Critical at ARiES ≥ 75.",
+      `Verification score combining behavioral anomaly, evidence leakage, control failure, and policy-compliance judges. Critical at ARiES ≥ ${CRITICAL_ARIES_THRESHOLD}.`,
   },
   {
     number: "04",

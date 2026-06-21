@@ -1,23 +1,16 @@
 import type { AriesComponents } from "@/lib/backend-types";
+import { ARIES_WEIGHT_ENTRIES } from "@/lib/riposte-config";
 import { formatScore } from "@/lib/format";
 
 interface AriesBreakdownProps {
   components: AriesComponents;
 }
 
-// Deployment weights from backend eval_service: ARiES = .35M + .35L + .20A + .10J
-const WEIGHTS: ReadonlyArray<{ key: keyof AriesComponents; label: string; weight: number }> = [
-  { key: "M", label: "Mahalanobis anomaly", weight: 0.35 },
-  { key: "L", label: "Semantic leakage", weight: 0.35 },
-  { key: "A", label: "Attack success", weight: 0.2 },
-  { key: "J", label: "LLM judge", weight: 0.1 },
-];
-
 /** Evaluation breakdown: per-component value bars (0–100) with weight labels. */
 export function AriesBreakdown({ components }: AriesBreakdownProps) {
   return (
     <div className="space-y-3">
-      {WEIGHTS.map(({ key, label, weight }) => {
+      {ARIES_WEIGHT_ENTRIES.map(({ key, label, weight }) => {
         const value = components[key];
         const pct = Math.min(Math.max(value, 0), 100);
         return (

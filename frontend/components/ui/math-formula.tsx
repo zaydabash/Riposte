@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import {
+  ARIES_WEIGHTS,
+  formatCoeff,
+  LEAKAGE_BLEND_WEIGHTS,
+} from "@/lib/riposte-config";
 
 export type MathFormulaVariant =
   | "aries"
@@ -35,19 +40,19 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
     <>
       <Var>ARiES</Var>
       <Op> = </Op>
-      <Coeff>0.35</Coeff>
+      <Coeff>{formatCoeff(ARIES_WEIGHTS.M)}</Coeff>
       <Op> · </Op>
       <Var>M</Var>
       <Op> + </Op>
-      <Coeff>0.35</Coeff>
+      <Coeff>{formatCoeff(ARIES_WEIGHTS.L)}</Coeff>
       <Op> · </Op>
       <Var>L</Var>
       <Op> + </Op>
-      <Coeff>0.20</Coeff>
+      <Coeff>{formatCoeff(ARIES_WEIGHTS.A)}</Coeff>
       <Op> · </Op>
       <Var>A</Var>
       <Op> + </Op>
-      <Coeff>0.10</Coeff>
+      <Coeff>{formatCoeff(ARIES_WEIGHTS.J)}</Coeff>
       <Op> · </Op>
       <Var>J</Var>
     </>
@@ -78,15 +83,15 @@ const formulas: Record<MathFormulaVariant, ReactNode> = {
     <>
       <Var>L</Var>
       <Op> = </Op>
-      <Coeff>0.5</Coeff>
+      <Coeff>{formatCoeff(LEAKAGE_BLEND_WEIGHTS.cosine)}</Coeff>
       <Op> · </Op>
       <Var>cos</Var>
       <Op> + </Op>
-      <Coeff>0.3</Coeff>
+      <Coeff>{formatCoeff(LEAKAGE_BLEND_WEIGHTS.entity)}</Coeff>
       <Op> · </Op>
       <Var>entity</Var>
       <Op> + </Op>
-      <Coeff>0.2</Coeff>
+      <Coeff>{formatCoeff(LEAKAGE_BLEND_WEIGHTS.token)}</Coeff>
       <Op> · </Op>
       <Var>token</Var>
     </>

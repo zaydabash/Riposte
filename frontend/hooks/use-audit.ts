@@ -6,6 +6,10 @@ import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 import { deriveAlerts, resetAlertDedupe, type Alert } from "@/lib/audit-selectors";
 import { NetworkAuditAdapter } from "@/adapters/network-audit-adapter";
 import type { AuditConfig, AuditService } from "@/ports/audit-service";
+import { MAX_PAYLOADS_LIMIT } from "@/lib/riposte-config";
+import { corpusLinesToList } from "@/lib/corpus-text";
+
+const defaultAuditService = new NetworkAuditAdapter();
 
 export type AuditPhase = "idle" | "configuring" | "running" | "failed" | "completed";
 
@@ -40,11 +44,20 @@ function validateConfig(config: AuditConfig): string | null {
   if (!config.targetEndpoint.trim()) return "Target endpoint is required.";
   if (!config.sourceRepository.trim()) return "Source repository is required.";
   if (!(config.maxPayloads > 0)) return "Max payloads must be a positive number.";
+  if (config.maxPayloads > MAX_PAYLOADS_LIMIT) {
+    return `Max payloads cannot exceed ${MAX_PAYLOADS_LIMIT}.`;
+  }
   if (!(config.pollingIntervalMs > 0)) return "Polling interval must be positive.";
+  if (corpusLinesToList(config.privateCorpusText).length < 1) {
+    return "Private corpus requires at least one line.";
+  }
+  if (corpusLinesToList(config.benignBaselineText).length < 2) {
+    return "Benign baseline requires at least two lines.";
+  }
   return null;
 }
 
-export function useAudit(service: AuditService = new NetworkAuditAdapter()): UseAuditResult {
+export function useAudit(service: AuditService = defaultAuditService): UseAuditResult {
   const [state, setState] = useState<RiposteAuditState | null>(null);
   const [auditId, setAuditId] = useState<string | null>(null);
   const [phase, setPhase] = useState<AuditPhase>("idle");

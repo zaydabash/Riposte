@@ -24,6 +24,10 @@ class RepairValidationService:
         target_endpoint: str,
         source_repository: str,
         technique_ids: list[str],
+        *,
+        private_corpus: list[str],
+        benign_baseline: list[str],
+        fuzz_seeds: list[str] | None = None,
     ) -> AuditRequest:
         return AuditRequest(
             target_name=f"{target_name} (repair validation)",
@@ -33,6 +37,9 @@ class RepairValidationService:
             verification_mode=VerificationMode.REPAIR_VALIDATION,
             baseline_run_id=remediation.audit_id,
             max_payloads=len(technique_ids),
+            private_corpus=private_corpus,
+            benign_baseline=benign_baseline,
+            fuzz_seeds=fuzz_seeds or [],
         )
 
     def compare_to_baseline(

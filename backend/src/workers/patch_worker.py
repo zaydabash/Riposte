@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 from src.config import Settings
 from src.core.models import RemediationResult, RemediationTask
+from src.core.truncate import truncate_text
 from src.services.github_client import GitHubClient
 from src.services.remediation_engine import RemediationEngine, route_to_file_candidates
 
@@ -70,7 +71,7 @@ class RemediationRunner:
                 payload=task.payload,
                 aries_score=task.aries_score,
                 status="failed",
-                detail=str(exc)[:500],
+                detail=truncate_text(str(exc), self._settings.max_error_detail_chars),
                 technique_id=task.technique_id,
                 baseline_run_id=task.baseline_run_id,
             )
@@ -167,5 +168,18 @@ async def patch_worker(
             logger.info("Remediation %s for audit %s", result.status, task.audit_id)
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("patch_worker error: %s", exc, exc_info=True)
+            await on_remediation(
+                RemediationResult(
+                    audit_id=task.audit_id,
+                    repo_url=task.repo_url,
+                    target_url=task.target_url,
+                    payload=task.payload,
+                    aries_score=task.aries_score,
+                    status="error",
+                    detail=truncate_text(str(exc), runner._settings.max_error_detail_chars),
+                    technique_id=task.technique_id,
+                    baseline_run_id=task.baseline_run_id,
+                )
+            )
         finally:
             remediation_queue.task_done()

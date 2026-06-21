@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class GitHubClient:
     def __init__(self, settings: Settings) -> None:
+        self._settings = settings
         self._token = settings.github_token
+        self._timeout = settings.github_http_timeout
         self._headers = {
             "Authorization": f"Bearer {self._token}",
             "Accept": "application/vnd.github+json",
@@ -29,7 +31,7 @@ class GitHubClient:
         if not self._token:
             raise RuntimeError("GitHub token is not configured.")
         base_url = f"{self._get_base_url(repo_full_name)}/contents/{file_path}"
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
             r = await client.get(base_url, headers=self._headers, params={"ref": branch})
             if r.status_code == 200:
                 data = r.json()
@@ -42,11 +44,11 @@ class GitHubClient:
         if not self._token:
             raise RuntimeError("GitHub token is not configured.")
         base_url = self._get_base_url(repo_full_name)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
             r = await client.get(base_url, headers=self._headers)
             if r.status_code == 200:
-                return r.json().get("default_branch", "main")
-            return "main"
+                return r.json().get("default_branch", self._settings.github_default_branch)
+            return self._settings.github_default_branch
 
     async def create_branch_and_commit(
         self,
@@ -62,7 +64,7 @@ class GitHubClient:
             raise RuntimeError("GitHub token is not configured.")
         base_url = self._get_base_url(repo_full_name)
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
             # 1. Get SHA of base_branch
             r = await client.get(f"{base_url}/git/ref/heads/{base_branch}", headers=self._headers)
             r.raise_for_status()
@@ -126,7 +128,7 @@ class GitHubClient:
             "body": description,
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
             r = await client.post(f"{base_url}/pulls", headers=self._headers, json=payload)
             r.raise_for_status()
             pr = r.json()

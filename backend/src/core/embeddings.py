@@ -157,7 +157,7 @@ class EmbeddingProvider:
             }
         else:
             body = {"model": self._settings.minimax_embedding_model, "input": texts}
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=self._settings.minimax_http_timeout) as client:
             resp = await client.post(url, params=params, headers=headers, json=body)
             resp.raise_for_status()
             data = resp.json()

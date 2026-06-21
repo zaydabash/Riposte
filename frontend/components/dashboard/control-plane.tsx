@@ -13,6 +13,11 @@ import type { AuditConfig } from "@/ports/audit-service";
 import type { HealthResponse, RiposteAuditState } from "@/lib/backend-types";
 import { GlassPanel } from "@/components/ui/glass-panel";
 import { LiquidButton } from "@/components/ui/liquid-button";
+import {
+  defaultApiBaseUrl,
+  MAX_PAYLOADS_LIMIT,
+  MIN_POLLING_INTERVAL_MS,
+} from "@/lib/riposte-config";
 import type { AuditPhase } from "@/hooks/use-audit";
 
 interface ControlPlaneSharedProps {
@@ -174,7 +179,7 @@ export function AuditConfigForm({
             New Audit
           </h2>
           <p className="mt-0.5 font-mono text-[10px] text-muted">
-            All fields required. No defaults applied
+            All fields required. API URL, payload budget, and poll interval pre-fill from env.
           </p>
         </div>
         <div className="flex gap-2">
@@ -203,7 +208,35 @@ export function AuditConfigForm({
             onChange={(e) => update("apiBaseUrl", e.target.value)}
             disabled={isActive}
             className={inputClass}
-            placeholder="http://127.0.0.1:8000"
+            placeholder={defaultApiBaseUrl()}
+          />
+        </div>
+        <div className="lg:col-span-3">
+          <label htmlFor="private-corpus" className={labelClass}>
+            Private Corpus
+          </label>
+          <textarea
+            id="private-corpus"
+            rows={compact ? 3 : 4}
+            value={config.privateCorpusText}
+            onChange={(e) => update("privateCorpusText", e.target.value)}
+            disabled={isActive}
+            className={cn(inputClass, "resize-y")}
+            placeholder="One proprietary document per line (data the target must not leak)"
+          />
+        </div>
+        <div className="lg:col-span-3">
+          <label htmlFor="benign-baseline" className={labelClass}>
+            Benign Baseline
+          </label>
+          <textarea
+            id="benign-baseline"
+            rows={compact ? 3 : 4}
+            value={config.benignBaselineText}
+            onChange={(e) => update("benignBaselineText", e.target.value)}
+            disabled={isActive}
+            className={cn(inputClass, "resize-y")}
+            placeholder="One normal on-topic response per line (at least two lines)"
           />
         </div>
         <div>
@@ -256,7 +289,7 @@ export function AuditConfigForm({
             id="max-payloads"
             type="number"
             min={1}
-            max={50}
+            max={MAX_PAYLOADS_LIMIT}
             value={config.maxPayloads}
             onChange={(e) => update("maxPayloads", Number(e.target.value))}
             disabled={isActive}
@@ -270,8 +303,8 @@ export function AuditConfigForm({
           <input
             id="poll-interval"
             type="number"
-            min={250}
-            step={250}
+            min={MIN_POLLING_INTERVAL_MS}
+            step={MIN_POLLING_INTERVAL_MS}
             value={config.pollingIntervalMs}
             onChange={(e) =>
               update("pollingIntervalMs", Number(e.target.value))

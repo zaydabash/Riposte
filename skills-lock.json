@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "8bf292143ca93b00276a0de0fc5f84f2381f4690c5b0d32e99fa283a072f392f"
+    },
+    "parallel-debugging": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/agent-teams/skills/parallel-debugging/SKILL.md",
+      "computedHash": "f3ecac29dca6b28b0fb32a22b37f80a0e3ec3fd7dd1e7ebf869095f9a9b996b8"
     }
   }
 }

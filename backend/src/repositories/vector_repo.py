@@ -50,8 +50,8 @@ class VectorRepository:
                 self._client = redis.from_url(
                     settings.redis_url,
                     decode_responses=False,
-                    socket_connect_timeout=3.0,
-                    socket_timeout=3.0,
+                    socket_connect_timeout=settings.redis_socket_timeout,
+                    socket_timeout=settings.redis_socket_timeout,
                 )
             except Exception as exc:  # pragma: no cover
                 logger.warning("Redis client init failed: %s", exc)
@@ -96,11 +96,21 @@ class VectorRepository:
     async def ensure_private_index(self, dim: int) -> bool:
         """Create the private-corpus HNSW vector index if it does not already exist."""
         return await self._ensure_vector_index(
-            PRIVATE_INDEX, PRIVATE_PREFIX, "document_text", dim
+            PRIVATE_INDEX,
+            PRIVATE_PREFIX,
+            "document_text",
+            dim,
+            include_audit_id_tag=True,
         )
 
     async def _ensure_vector_index(
-        self, index_name: str, prefix: str, text_field: str, dim: int, track: str = "default"
+        self,
+        index_name: str,
+        prefix: str,
+        text_field: str,
+        dim: int,
+        track: str = "default",
+        include_audit_id_tag: bool = False,
     ) -> bool:
         if self._client is None:
             return False
@@ -114,13 +124,20 @@ class VectorRepository:
         except Exception:
             pass
         try:
+            schema: list = [
+                text_field, "TEXT",
+            ]
+            if include_audit_id_tag:
+                schema.extend(["audit_id", "TAG"])
+            schema.extend([
+                "embedding", "VECTOR", "HNSW", "6",
+                "TYPE", "FLOAT32", "DIM", str(dim), "DISTANCE_METRIC", "COSINE",
+            ])
             await self._client.execute_command(
                 "FT.CREATE", index_name,
                 "ON", "HASH", "PREFIX", "1", prefix,
                 "SCHEMA",
-                text_field, "TEXT",
-                "embedding", "VECTOR", "HNSW", "6",
-                "TYPE", "FLOAT32", "DIM", str(dim), "DISTANCE_METRIC", "COSINE",
+                *schema,
             )
             if track == "evidence":
                 self._evidence_index_available = True
@@ -166,17 +183,24 @@ class VectorRepository:
             return False
 
     async def index_private_document(
-        self, key: str, document_text: str, embedding: list[float] | np.ndarray
+        self,
+        key: str,
+        document_text: str,
+        embedding: list[float] | np.ndarray,
+        audit_id: str | None = None,
     ) -> bool:
         if self._client is None:
             return False
         try:
+            mapping: dict = {
+                "document_text": document_text.encode("utf-8"),
+                "embedding": _to_bytes(embedding),
+            }
+            if audit_id is not None:
+                mapping["audit_id"] = audit_id.encode("utf-8")
             await self._client.hset(
                 f"{PRIVATE_PREFIX}{key}",
-                mapping={
-                    "document_text": document_text.encode("utf-8"),
-                    "embedding": _to_bytes(embedding),
-                },
+                mapping=mapping,
             )
             return True
         except Exception as exc:  # pragma: no cover
@@ -202,12 +226,45 @@ class VectorRepository:
         )
 
     async def search_similar_private_docs(
-        self, query_embedding: list[float] | np.ndarray, k: int = 5
+        self,
+        query_embedding: list[float] | np.ndarray,
+        k: int = 5,
+        audit_id: str | None = None,
     ) -> list[str]:
         """Return up to ``k`` private corpus documents nearest the query vector."""
+        if audit_id:
+            return await self._vector_search_private(
+                query_embedding, k, audit_id
+            )
         return await self._vector_search(
             PRIVATE_INDEX, query_embedding, k, "document_text"
         )
+
+    async def _vector_search_private(
+        self,
+        query_embedding: list[float] | np.ndarray,
+        k: int,
+        audit_id: str,
+    ) -> list[str]:
+        if self._client is None or not self._vector_search_available:
+            return []
+        query_vector = _to_bytes(query_embedding)
+        query = (
+            f"@audit_id:{{{audit_id}}}=>[KNN {k} @embedding $vec AS vector_score]"
+        )
+        try:
+            results = await self._client.execute_command(
+                "FT.SEARCH", PRIVATE_INDEX, query,
+                "RETURN", "1", "document_text",
+                "SORTBY", "vector_score",
+                "LIMIT", "0", str(k),
+                "PARAMS", "2", "vec", query_vector,
+                "DIALECT", "2",
+            )
+        except Exception as exc:
+            logger.warning("FT.SEARCH %s failed: %s", PRIVATE_INDEX, exc)
+            return []
+        return self._parse_text_results(results, "document_text")
 
     async def _vector_search(
         self,

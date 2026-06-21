@@ -134,6 +134,31 @@ describe("deriveProgress", () => {
 });
 
 describe("deriveAlerts dedupe", () => {
+  it("emits a new-finding alert with ARiES score in the title", () => {
+    const id = uid();
+    const f = makeFinding({ task_id: "n1", aries_score: 42.3, severity: "medium" });
+    const prev = makeState({ audit_id: id, findings: [] });
+    const next = makeState({ audit_id: id, findings: [f] });
+    const alerts = deriveAlerts(prev, next, id);
+    const nf = alerts.find((a) => a.type === "new_finding");
+    expect(nf?.title).toBe("New finding · ARiES 42.3");
+    expect(nf?.title).not.toMatch(/MEDIUM|HIGH|LOW/);
+    expect(nf?.ariesScore).toBe(42.3);
+  });
+
+  it("sorts alerts by ariesScore when available", () => {
+    const id = uid();
+    const low = makeFinding({ task_id: "low", aries_score: 40, severity: "medium" });
+    const high = makeFinding({ task_id: "high", aries_score: 85, is_critical: true });
+    const prev = makeState({ audit_id: id, findings: [] });
+    const next = makeState({ audit_id: id, findings: [low, high] });
+    const alerts = deriveAlerts(prev, next, id);
+    const newFindings = alerts.filter((a) => a.type === "new_finding");
+    expect(newFindings[0]?.ariesScore).toBeGreaterThanOrEqual(
+      newFindings[newFindings.length - 1]?.ariesScore ?? 0,
+    );
+  });
+
   it("emits a critical alert once across repeated polls", () => {
     const id = uid();
     const crit = makeFinding({ task_id: "c1", is_critical: true, aries_score: 90 });

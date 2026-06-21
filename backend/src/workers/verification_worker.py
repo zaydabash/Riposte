@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import Settings
+from src.core.truncate import truncate_text
 from src.core.models import (
     ScenarioTask,
     VerificationResult,
@@ -97,7 +98,11 @@ class VerificationRunner:
                 exc,
                 exc_info=True,
             )
-            result = _error_result(task, payload_label, str(exc)[:500])
+            result = _error_result(
+                task,
+                payload_label,
+                truncate_text(str(exc), self._settings.max_error_detail_chars) or "",
+            )
             await _emit(
                 on_progress,
                 task,
@@ -180,7 +185,6 @@ class VerificationRunner:
         step: BrowserStep,
     ) -> tuple[str, str]:
         if step.action == "navigate":
-            # Navigate to target
             await session.navigate(url=task.target_url)
             return f"Navigated to {task.target_url}", ""
 
@@ -397,5 +401,17 @@ async def verification_worker(
             await eval_queue.put(result)
         except Exception as exc:  # pragma: no cover
             logger.error("verification_worker error: %s", exc, exc_info=True)
+            try:
+                scenario = get_scenario(task.technique_id)
+                payload_label = f"{task.technique_id}: {scenario.technique_name}"
+            except Exception:
+                payload_label = task.technique_id
+            await eval_queue.put(
+                _error_result(
+                    task,
+                    payload_label,
+                    truncate_text(str(exc), runner._settings.max_error_detail_chars) or "",
+                ),
+            )
         finally:
             verify_queue.task_done()

@@ -118,6 +118,23 @@ class AuditRequest(BaseModel):
     technique_ids: list[str] = Field(default_factory=list)
     verification_mode: VerificationMode = VerificationMode.CONTINUOUS
     baseline_run_id: str | None = None
+    private_corpus: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Proprietary documents the target must not disclose.",
+    )
+    benign_baseline: list[str] = Field(
+        ...,
+        min_length=2,
+        max_length=500,
+        description="On-topic benign responses used to fit the anomaly baseline.",
+    )
+    fuzz_seeds: list[str] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Optional adversarial seed prompts; derived from private_corpus when empty.",
+    )
 
 
 class ScenarioTask(BaseModel):

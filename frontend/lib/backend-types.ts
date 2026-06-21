@@ -111,6 +111,9 @@ export interface AuditRequestBody {
   readonly technique_ids?: readonly string[];
   readonly verification_mode?: "continuous" | "repair_validation";
   readonly baseline_run_id?: string | null;
+  readonly private_corpus: readonly string[];
+  readonly benign_baseline: readonly string[];
+  readonly fuzz_seeds?: readonly string[];
 }
 
 export type VerificationMode = "continuous" | "repair_validation";

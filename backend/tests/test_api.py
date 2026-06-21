@@ -3,6 +3,20 @@ from fastapi.testclient import TestClient
 
 import src.repositories.vector_repo as vector_repo_mod
 from src.main import create_app
+from tests.sample_corpora import SAMPLE_BENIGN_BASELINE, SAMPLE_PRIVATE_CORPUS
+
+
+def _audit_body(**overrides) -> dict:
+    body = {
+        "target_name": "Demo Bot",
+        "target_endpoint": "https://target.example.com",
+        "source_repository": "https://github.com/target/bot",
+        "max_payloads": 3,
+        "private_corpus": SAMPLE_PRIVATE_CORPUS[:3],
+        "benign_baseline": SAMPLE_BENIGN_BASELINE[:3],
+    }
+    body.update(overrides)
+    return body
 
 
 @pytest.fixture()
@@ -24,12 +38,7 @@ def test_health_reports_integrations(client):
 def test_start_audit_returns_running_state(client):
     resp = client.post(
         "/api/v1/audit/start",
-        json={
-            "target_name": "Demo Bot",
-            "target_endpoint": "https://target.example.com",
-            "source_repository": "https://github.com/target/bot",
-            "max_payloads": 3,
-        },
+        json=_audit_body(),
     )
     assert resp.status_code == 202
     body = resp.json()
@@ -41,15 +50,22 @@ def test_start_audit_returns_running_state(client):
     assert got.status_code == 200
 
 
-def test_rejects_non_web_ui_interface(client):
+def test_rejects_missing_corpus(client):
     resp = client.post(
         "/api/v1/audit/start",
         json={
             "target_name": "Demo",
             "target_endpoint": "https://target.example.com",
             "source_repository": "https://github.com/target/bot",
-            "interface_type": "api",
         },
+    )
+    assert resp.status_code == 422
+
+
+def test_rejects_non_web_ui_interface(client):
+    resp = client.post(
+        "/api/v1/audit/start",
+        json=_audit_body(interface_type="api"),
     )
     # Pydantic enum validation rejects unknown interface types at the boundary.
     assert resp.status_code == 422

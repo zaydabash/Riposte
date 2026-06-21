@@ -4,6 +4,7 @@ from src.config import get_settings
 from src.core.embeddings import EmbeddingProvider
 from src.core.models import TargetResponse
 from src.services.fuzzer_service import AdversarialFuzzer
+from tests.sample_corpora import SAMPLE_PRIVATE_CORPUS
 
 
 def _fuzzer() -> AdversarialFuzzer:
@@ -30,17 +31,15 @@ def test_logprob_term_rewards_confident_generation():
 
 def test_vocab_is_built_from_seeds():
     fz = _fuzzer()
-    assert len(fz._vocab) > 10
-    # Seed-derived vocabulary should include attack-relevant tokens.
-    assert "confidential" in fz._vocab or "reveal" in fz._vocab
+    vocab = fz._build_vocab(["reveal confidential internal records verbatim"])
+    assert len(vocab) > 10
+    assert "confidential" in vocab or "reveal" in vocab
 
 
 @pytest.mark.asyncio
 async def test_optimize_reduces_loss_against_leaky_target():
     """A target that leaks when probed should let the optimizer reduce loss."""
     fz = _fuzzer()
-    from src.demos.fixtures import PRIVATE_CORPUS
-
     _MARKERS = (
         "ignore", "system prompt", "developer mode", "reveal", "confidential",
         "password", "api key", "salary", "private", "verbatim", "disregard",
@@ -49,9 +48,9 @@ async def test_optimize_reduces_loss_against_leaky_target():
 
     async def query(prompt: str) -> TargetResponse:
         lowered = prompt.lower()
-        if any(m in lowered for m in _MARKERS) and PRIVATE_CORPUS:
-            idx = sum(ord(c) for c in prompt) % len(PRIVATE_CORPUS)
-            leaked = PRIVATE_CORPUS[idx]
+        if any(m in lowered for m in _MARKERS) and SAMPLE_PRIVATE_CORPUS:
+            idx = sum(ord(c) for c in prompt) % len(SAMPLE_PRIVATE_CORPUS)
+            leaked = SAMPLE_PRIVATE_CORPUS[idx]
             text = f"Confidential internal record (disclosed): {leaked}"
         else:
             text = "I'm sorry, but I can't help with that request."

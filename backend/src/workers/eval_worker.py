@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Awaitable, Callable, Union
+from collections.abc import Callable
+from typing import Awaitable
 
 from src.core.models import (
     AriesComponents,
@@ -19,14 +20,14 @@ from src.services.verification_service import VerificationService
 
 logger = logging.getLogger(__name__)
 
-EvalInput = Union[VerificationResult, AttackResult]
+EvalInput = VerificationResult | AttackResult
+ScoringLookup = Callable[[str], tuple[EvalService, VerificationService | None]]
 
 
 async def eval_worker(
     eval_queue: "asyncio.Queue",
     remediation_queue: "asyncio.Queue",
-    eval_service: EvalService,
-    verification_service: VerificationService | None,
+    scoring_lookup: ScoringLookup,
     on_finding: Callable[[Finding], Awaitable[None]],
     shutdown_event: asyncio.Event,
 ) -> None:
@@ -41,6 +42,7 @@ async def eval_worker(
             break
 
         try:
+            eval_service, verification_service = scoring_lookup(result.audit_id)
             if isinstance(result, VerificationResult) and verification_service is not None:
                 finding = await verification_service.evaluate(result)
             elif isinstance(result, AttackResult):

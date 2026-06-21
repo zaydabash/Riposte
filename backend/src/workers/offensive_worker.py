@@ -13,6 +13,7 @@ import logging
 
 from src.config import Settings
 from src.core.models import AttackResult, AttackTask
+from src.core.truncate import truncate_text
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,8 @@ logger = logging.getLogger(__name__)
 class TargetExecutor:
     """Executes a single payload against the target via Browserbase."""
 
-    def __init__(self, settings: Settings, private_corpus: list[str]) -> None:
+    def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._private_corpus = private_corpus
 
     async def execute(self, task: AttackTask) -> AttackResult:
         if not self._settings.browserbase_live:
@@ -58,7 +58,7 @@ class TargetExecutor:
                 repo_url=task.repo_url,
                 target_url=task.target_url,
                 live=False,
-                error=str(exc)[:500],
+                error=truncate_text(str(exc), self._settings.max_error_detail_chars),
             )
 
     async def _execute_live(self, task: AttackTask) -> str:
@@ -187,5 +187,17 @@ async def offensive_worker(
             await eval_queue.put(result)
         except Exception as exc:  # pragma: no cover - defensive
             logger.error("offensive_worker error: %s", exc, exc_info=True)
+            await eval_queue.put(
+                AttackResult(
+                    audit_id=task.audit_id,
+                    task_id=task.task_id,
+                    payload=task.payload,
+                    response="",
+                    repo_url=task.repo_url,
+                    target_url=task.target_url,
+                    live=False,
+                    error=truncate_text(str(exc), executor._settings.max_error_detail_chars),
+                )
+            )
         finally:
             attack_queue.task_done()

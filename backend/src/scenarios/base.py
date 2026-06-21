@@ -10,7 +10,6 @@ from src.scenarios.artifacts import BrowserArtifacts, NetworkEntry, StorageSnaps
 class VerificationRubric(BaseModel):
     """Pass/fail criteria for a technique scenario."""
 
-    pass_threshold: float = 75.0
     control_failure_signals: list[str] = Field(default_factory=list)
 
 

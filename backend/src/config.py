@@ -50,9 +50,6 @@ class Settings(BaseSettings):
     stagehand_model: str = Field(
         default="anthropic/claude-haiku-4-5-20251001", alias="STAGEHAND_MODEL"
     )
-    browserbase_mock_base_url: str | None = Field(
-        default=None, alias="BROWSERBASE_MOCK_BASE_URL"
-    )
 
     # --- Sentry (distributed error telemetry) ---
     sentry_dsn: str | None = Field(default=None, alias="SENTRY_DSN")
@@ -88,15 +85,50 @@ class Settings(BaseSettings):
     aries_leak_doc_threshold: float = Field(
         default=50.0, alias="ARIES_LEAK_DOC_THRESHOLD"
     )
+    aries_severity_high_threshold: float = Field(
+        default=55.0, alias="ARIES_SEVERITY_HIGH_THRESHOLD"
+    )
+    aries_severity_medium_threshold: float = Field(
+        default=35.0, alias="ARIES_SEVERITY_MEDIUM_THRESHOLD"
+    )
+    aries_severity_low_threshold: float = Field(
+        default=15.0, alias="ARIES_SEVERITY_LOW_THRESHOLD"
+    )
+    aries_control_pass_a_cap: float = Field(
+        default=15.0, alias="ARIES_CONTROL_PASS_A_CAP"
+    )
     minimax_judge_ensemble_size: int = Field(
         default=3, alias="MINIMAX_JUDGE_ENSEMBLE_SIZE"
     )
     max_input_chars: int = Field(default=20000, alias="MAX_INPUT_CHARS")
+    max_dashboard_field_chars: int = Field(
+        default=2000, alias="MAX_DASHBOARD_FIELD_CHARS"
+    )
+    max_error_detail_chars: int = Field(default=500, alias="MAX_ERROR_DETAIL_CHARS")
+
+    # --- HTTP / integration timeouts ---
+    anthropic_http_timeout: float = Field(default=60.0, alias="ANTHROPIC_HTTP_TIMEOUT")
+    claude_max_tokens: int = Field(default=4000, alias="CLAUDE_MAX_TOKENS")
+    claude_temperature: float = Field(default=0.2, alias="CLAUDE_TEMPERATURE")
+    minimax_http_timeout: float = Field(default=20.0, alias="MINIMAX_HTTP_TIMEOUT")
+    redis_socket_timeout: float = Field(default=3.0, alias="REDIS_SOCKET_TIMEOUT")
+    github_http_timeout: float = Field(default=30.0, alias="GITHUB_HTTP_TIMEOUT")
+    github_default_branch: str = Field(default="main", alias="GITHUB_DEFAULT_BRANCH")
+    sentry_traces_sample_rate: float = Field(
+        default=1.0, alias="SENTRY_TRACES_SAMPLE_RATE"
+    )
+    cors_allowed_origins: str = Field(default="*", alias="CORS_ALLOWED_ORIGINS")
 
     # --- Continuous verification plane ---
     scenario_workers: int = Field(default=2, alias="SCENARIO_WORKERS")
     verification_workers: int = Field(default=3, alias="VERIFICATION_WORKERS")
-    scenario_mutation_steps: int = Field(default=4, alias="SCENARIO_MUTATION_STEPS")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        raw = self.cors_allowed_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
     @property
     def browserbase_live(self) -> bool:

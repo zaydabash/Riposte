@@ -32,7 +32,8 @@ from src.core.models import (
     VerificationStepStatus,
     _new_id,
 )
-from src.demos.fixtures import PRIVATE_CORPUS, SEED_PAYLOADS
+from src.core.fuzz_seeds import derive_fuzz_seeds
+from src.core.truncate import truncate_text
 from src.repositories.vector_repo import VectorRepository
 from src.scenarios.base import describe_browser_step
 from src.scenarios.registry import get_scenario, resolve_technique_ids
@@ -62,11 +63,10 @@ class Orchestrator:
         minimax = build_minimax_client(settings)
         self._vector_repo = VectorRepository(settings)
         self._minimax = minimax
-        self._eval_service: EvalService | None = None
-        self._verification_service: VerificationService | None = None
+        self._audit_scoring: dict[str, tuple[EvalService, VerificationService]] = {}
         self._mutation = ScenarioMutationService(settings, self._vector_repo)
         self._fuzzer = AdversarialFuzzer(settings, self._embeddings)
-        self._target_executor = TargetExecutor(settings, list(PRIVATE_CORPUS))
+        self._target_executor = TargetExecutor(settings)
         self._verification_runner = VerificationRunner(settings)
         self._runner = RemediationRunner(settings)
         self._repair_validation = RepairValidationService()
@@ -85,8 +85,7 @@ class Orchestrator:
         self._tasks: list[asyncio.Task] = []
 
     async def start(self) -> None:
-        await self._initialize_scoring_services()
-        await self._warm_redis_memory()
+        await self._ensure_redis_indexes()
         for _ in range(self._settings.scenario_workers):
             self._tasks.append(asyncio.create_task(
                 scenario_plan_worker(
@@ -134,8 +133,7 @@ class Orchestrator:
                 eval_worker(
                     self.eval_queue,
                     self.remediation_queue,
-                    self._require_eval_service(),
-                    self._require_verification_service(),
+                    self._resolve_scoring,
                     self._record_finding,
                     self._shutdown,
                 )
@@ -151,47 +149,63 @@ class Orchestrator:
             ))
         logger.info("Orchestrator started with %d workers", len(self._tasks))
 
-    async def _initialize_scoring_services(self) -> None:
-        self._eval_service = await EvalService.create(
-            settings=self._settings,
-            embeddings=self._embeddings,
-            private_corpus=list(PRIVATE_CORPUS),
-            minimax=self._minimax,
-            vector_repo=self._vector_repo,
-        )
-        self._verification_service = VerificationService(
-            settings=self._settings,
-            eval_service=self._eval_service,
-            embeddings=self._embeddings,
-            vector_repo=self._vector_repo,
-        )
+    def _resolve_scoring(
+        self, audit_id: str
+    ) -> tuple[EvalService, VerificationService | None]:
+        scoring = self._audit_scoring.get(audit_id)
+        if scoring is None:
+            raise RuntimeError(f"No scoring context for audit {audit_id}")
+        return scoring
 
-    def _require_eval_service(self) -> EvalService:
-        if self._eval_service is None:
-            raise RuntimeError("EvalService not initialized")
-        return self._eval_service
-
-    def _require_verification_service(self) -> VerificationService:
-        if self._verification_service is None:
-            raise RuntimeError("VerificationService not initialized")
-        return self._verification_service
-
-    async def _warm_redis_memory(self) -> None:
-        """Seed Redis Stack indexes before workers accept traffic."""
+    async def _ensure_redis_indexes(self) -> None:
+        """Create Redis Stack indexes before workers accept traffic."""
         try:
             dim = await self._embeddings.scoring_dim()
             await self._vector_repo.ensure_index(dim)
             await self._vector_repo.ensure_private_index(dim)
             await self._vector_repo.ensure_evidence_index(dim)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("Redis index setup skipped: %s", exc)
+
+    async def _register_audit_scoring(
+        self, audit_id: str, request: AuditRequest
+    ) -> None:
+        eval_service = await EvalService.create(
+            settings=self._settings,
+            embeddings=self._embeddings,
+            private_corpus=list(request.private_corpus),
+            benign_baseline=list(request.benign_baseline),
+            minimax=self._minimax,
+            vector_repo=self._vector_repo,
+            audit_id=audit_id,
+        )
+        verification_service = VerificationService(
+            settings=self._settings,
+            eval_service=eval_service,
+            embeddings=self._embeddings,
+            vector_repo=self._vector_repo,
+        )
+        self._audit_scoring[audit_id] = (eval_service, verification_service)
+        await self._index_audit_corpus(audit_id, list(request.private_corpus))
+
+    async def _index_audit_corpus(
+        self, audit_id: str, private_corpus: list[str]
+    ) -> None:
+        try:
             private_embeddings = await self._embeddings.embed_many_for_scoring(
-                list(PRIVATE_CORPUS)
+                private_corpus
             )
-            for i, (doc, embedding) in enumerate(zip(PRIVATE_CORPUS, private_embeddings)):
+            for i, (doc, embedding) in enumerate(
+                zip(private_corpus, private_embeddings)
+            ):
                 await self._vector_repo.index_private_document(
-                    str(i), doc, embedding
+                    f"{audit_id}:{i}",
+                    doc,
+                    embedding,
+                    audit_id=audit_id,
                 )
         except Exception as exc:  # pragma: no cover
-            logger.warning("Redis memory warm-up skipped: %s", exc)
+            logger.warning("Audit corpus indexing skipped: %s", exc)
 
     async def stop(self) -> None:
         self._shutdown.set()
@@ -218,7 +232,12 @@ class Orchestrator:
             request.technique_ids or None
         )[: request.max_payloads]
 
-        fuzz_seeds = SEED_PAYLOADS[: request.max_payloads]
+        fuzz_seeds = (
+            list(request.fuzz_seeds)
+            if request.fuzz_seeds
+            else derive_fuzz_seeds(list(request.private_corpus), request.max_payloads)
+        )
+        fuzz_seeds = fuzz_seeds[: request.max_payloads]
 
         state = AuditState(
             target_name=request.target_name,
@@ -235,7 +254,11 @@ class Orchestrator:
             "target_name": request.target_name,
             "target_endpoint": str(request.target_endpoint),
             "source_repository": str(request.source_repository),
+            "private_corpus": list(request.private_corpus),
+            "benign_baseline": list(request.benign_baseline),
+            "fuzz_seeds": fuzz_seeds,
         }
+        await self._register_audit_scoring(state.audit_id, request)
 
         for technique_id in technique_ids:
             scenario = get_scenario(technique_id)
@@ -357,7 +380,9 @@ class Orchestrator:
                 if step_status is not None:
                     step.status = step_status
                 if step_detail is not None:
-                    step.detail = step_detail[:2000]
+                    step.detail = truncate_text(
+                        step_detail, self._settings.max_dashboard_field_chars
+                    )
                 updated.steps[step_index] = step
 
             if result is not None:
@@ -367,12 +392,18 @@ class Orchestrator:
                     else VerificationSessionStatus.EVALUATING
                 )
                 updated.verification_status = result.verification_status
-                updated.agent_response = result.response[:2000] if result.response else None
-                updated.dom_after = result.artifacts.dom_after[:2000] if result.artifacts.dom_after else None
+                updated.agent_response = truncate_text(
+                    result.response, self._settings.max_dashboard_field_chars
+                )
+                updated.dom_after = truncate_text(
+                    result.artifacts.dom_after, self._settings.max_dashboard_field_chars
+                )
                 updated.live = result.live
                 updated.session_id = result.artifacts.session_id or updated.session_id
                 if result.error:
-                    updated.error = result.error[:2000]
+                    updated.error = truncate_text(
+                        result.error, self._settings.max_dashboard_field_chars
+                    )
                 for j, step in enumerate(updated.steps):
                     if step.status in {
                         VerificationStepStatus.PENDING,
@@ -404,8 +435,12 @@ class Orchestrator:
                 audit.fuzz_sessions[i] = session.model_copy(
                     update={
                         "status": "error" if finding.detail else "completed",
-                        "response": finding.response[:2000],
-                        "error": finding.detail[:500] if finding.detail else None,
+                        "response": truncate_text(
+                            finding.response, self._settings.max_dashboard_field_chars
+                        ),
+                        "error": truncate_text(
+                            finding.detail, self._settings.max_error_detail_chars
+                        ),
                         "updated_at": datetime.now(timezone.utc),
                     }
                 )
@@ -433,7 +468,9 @@ class Orchestrator:
                         audit.fuzz_sessions[i] = session.model_copy(
                             update={
                                 "status": "attacking",
-                                "generated_payload": result.payload[:2000],
+                                "generated_payload": truncate_text(
+                                    result.payload, self._settings.max_dashboard_field_chars
+                                ),
                                 "initial_loss": result.initial_loss,
                                 "final_loss": result.final_loss,
                                 "updated_at": datetime.now(timezone.utc),
@@ -474,6 +511,9 @@ class Orchestrator:
                 meta.get("target_endpoint", audit.target_endpoint),
                 meta.get("source_repository", audit.source_repository),
                 [enriched.technique_id],
+                private_corpus=meta.get("private_corpus", []),
+                benign_baseline=meta.get("benign_baseline", []),
+                fuzz_seeds=meta.get("fuzz_seeds"),
             )
             asyncio.create_task(self._run_revalidation(revalidation))
 

@@ -19,6 +19,11 @@ import type {
   Severity,
   VerificationSession,
 } from "@/lib/backend-types";
+import {
+  ARIES_BAND_MEDIUM_THRESHOLD,
+  CRITICAL_ARIES_THRESHOLD,
+  LEAKAGE_ALERT_THRESHOLD,
+} from "@/lib/riposte-config";
 
 // --- keys ------------------------------------------------------------------
 
@@ -144,8 +149,8 @@ export function deriveGlobalAries(state: RiposteAuditState | null): number | nul
 /** ARiES band for color coding. */
 export function ariesBand(score: number | null): "empty" | "low" | "medium" | "high" {
   if (score === null) return "empty";
-  if (score >= 75) return "high";
-  if (score >= 40) return "medium";
+  if (score >= CRITICAL_ARIES_THRESHOLD) return "high";
+  if (score >= ARIES_BAND_MEDIUM_THRESHOLD) return "medium";
   return "low";
 }
 
@@ -232,10 +237,9 @@ export interface Alert {
   readonly detail: string;
   readonly createdAt: string;
   readonly findingKey?: string;
+  /** When set, drives alert color and sort order instead of severity enum. */
+  readonly ariesScore?: number;
 }
-
-const LEAKAGE_ALERT_THRESHOLD = 50;
-const CRITICAL_ARIES_THRESHOLD = 75;
 
 /**
  * Advance the alert feed for one poll cycle and return the full deduped feed.
@@ -265,10 +269,11 @@ export function deriveAlerts(
       id: `${auditId}|${findingKey(f)}|new_finding`,
       type: "new_finding",
       severity: f.severity,
-      title: `New finding · ${f.severity.toUpperCase()}`,
+      title: `New finding · ARiES ${f.aries_score.toFixed(1)}`,
       detail: truncate(f.payload, 120),
       createdAt: f.created_at,
       findingKey: findingKey(f),
+      ariesScore: f.aries_score,
     });
   }
   for (const r of diffRemediations(prev, next)) {
@@ -279,6 +284,7 @@ export function deriveAlerts(
       title: `Remediation · ${r.status}`,
       detail: r.pr_url ?? truncate(r.payload, 120),
       createdAt: r.created_at,
+      ariesScore: r.aries_score,
     });
   }
   // New leaked documents on findings (compare prev finding's set vs next).
@@ -298,6 +304,7 @@ export function deriveAlerts(
         detail: truncate(doc, 140),
         createdAt: f.created_at,
         findingKey: findingKey(f),
+        ariesScore: f.aries_score,
       });
     }
   }
@@ -321,6 +328,7 @@ export function deriveAlerts(
         detail: truncate(f.payload, 120),
         createdAt: f.created_at,
         findingKey: fk,
+        ariesScore: f.aries_score,
       }));
     }
     if (f.components.L >= LEAKAGE_ALERT_THRESHOLD) {
@@ -333,6 +341,7 @@ export function deriveAlerts(
         detail: truncate(f.payload, 120),
         createdAt: f.created_at,
         findingKey: fk,
+        ariesScore: f.aries_score,
       }));
     }
   }
@@ -357,9 +366,14 @@ export function deriveAlerts(
   return sortAlerts(cache.feed);
 }
 
+function alertSortScore(alert: Alert): number {
+  if (alert.ariesScore !== undefined) return alert.ariesScore;
+  return severityRank(alert.severity) * 15;
+}
+
 function sortAlerts(feed: Alert[]): Alert[] {
   return [...feed].sort((a, b) => {
-    const rb = severityRank(b.severity) - severityRank(a.severity);
+    const rb = alertSortScore(b) - alertSortScore(a);
     if (rb !== 0) return rb;
     return parseCreatedAt(b.createdAt) - parseCreatedAt(a.createdAt);
   });

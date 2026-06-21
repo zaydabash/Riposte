@@ -29,7 +29,7 @@ def init_sentry(settings: Settings) -> bool:
 
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
-            traces_sample_rate=1.0,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
             send_default_pii=False,  # SECURITY: do not leak PII to Sentry
             integrations=integrations,
         )

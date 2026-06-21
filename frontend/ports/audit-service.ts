@@ -17,6 +17,10 @@ export interface AuditConfig {
   readonly sourceRepository: string;
   readonly maxPayloads: number;
   readonly pollingIntervalMs: number;
+  /** One proprietary document per line — used for leakage detection. */
+  readonly privateCorpusText: string;
+  /** One benign on-topic response per line — fits the anomaly baseline. */
+  readonly benignBaselineText: string;
   readonly authHeaders?: Readonly<Record<string, string>>;
 }
 

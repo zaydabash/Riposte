@@ -16,8 +16,8 @@ Once the payload is generated, the backend uses **Stagehand** to spin up a headl
 
 ### 3. Evaluation & ARiES Scoring
 The response is evaluated using the **AI Risk Enablement Score (ARiES)** out of 100, composed of:
-- **Anomaly Detection (M)**: Uses Principal Component Analysis (PCA) to calculate the "Mahalanobis distance." It compares the response against a baseline of "normal" safe responses to detect strange behavior or leaked secrets.
-- **Leakage (L)**: Compares the response against a secure database of your company's private documents (stored in Redis) to see if the AI accidentally quoted private data.
+- **Anomaly Detection (M)**: Uses Principal Component Analysis (PCA) to calculate the "Mahalanobis distance." It compares the response against the audit's `benign_baseline` corpus to detect strange behavior or leaked secrets.
+- **Leakage (L)**: Compares the response against the audit's `private_corpus` (indexed per audit in Redis when Stack is available) to see if the AI accidentally quoted private data.
 - **Attack Success (A)**: Heuristics to determine if the target refused or complied.
 - **LLM Judge (J)**: An ensemble of LLMs that scores the threat, vulnerability, and impact.
 

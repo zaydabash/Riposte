@@ -101,7 +101,6 @@ class AdversarialFuzzer:
         self._embeddings = embeddings
         self._objective_emb = embeddings.embed(_OBJECTIVE_PROTOTYPE)
         self._refusal_emb = embeddings.embed(_REFUSAL_PROTOTYPE)
-        self._vocab = self._build_vocab()
 
     # --- public API ----------------------------------------------------------
     async def generate(
@@ -123,8 +122,9 @@ class AdversarialFuzzer:
         rng = random.Random(self._settings.fuzzer_seed + run_index)
         n_tokens = max(1, self._settings.fuzzer_suffix_tokens)
         steps = max(1, self._settings.fuzzer_steps)
+        vocab = self._build_vocab([base])
 
-        suffix = [rng.choice(self._vocab) for _ in range(n_tokens)]
+        suffix = [rng.choice(vocab) for _ in range(n_tokens)]
         try:
             current_loss = await self._loss(base, suffix, query_fn)
         except Exception as exc:  # query failure → return base unoptimized
@@ -144,7 +144,7 @@ class AdversarialFuzzer:
             temperature = temp0 * (1.0 - step / steps) + 1e-6
             candidate = list(suffix)
             pos = rng.randrange(n_tokens)
-            candidate[pos] = rng.choice(self._vocab)
+            candidate[pos] = rng.choice(vocab)
 
             try:
                 candidate_loss = await self._loss(base, candidate, query_fn)
@@ -213,12 +213,10 @@ class AdversarialFuzzer:
         return float(np.clip(np.dot(a, b) / (na * nb), -1.0, 1.0))
 
     # --- vocabulary ----------------------------------------------------------
-    def _build_vocab(self) -> list[str]:
+    def _build_vocab(self, seeds: list[str]) -> list[str]:
         """Assemble the search alphabet from seeds + spaCy lexicon (no templates)."""
-        from src.demos.fixtures import SEED_PAYLOADS
-
         tokens: set[str] = set()
-        for seed in SEED_PAYLOADS:
+        for seed in seeds:
             tokens.update(w.lower() for w in _WORD_RE.findall(seed))
 
         try:  # lazy: enrich with frequent, vector-backed lexemes when available

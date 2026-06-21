@@ -1,0 +1,46 @@
+---
+description: Forbid hardcoded fixtures and require functional data flows
+alwaysApply: true
+---
+# No Hardcoded Fixtures
+
+All runtime behavior must be functional: driven by request input, `Settings`/env, Redis, or external APIs. Never introduce static demo data, shared fixture modules, or canned runtime values.
+
+1. **No static fixture modules or demo datasets.** Do not add `fixtures.py`, `demos/`, `mock_data/`, or modules exporting corpora/seed lists (`BENIGN_BASELINE`, `PRIVATE_CORPUS`, `SEED_PAYLOADS`, etc.). Do not import fixture modules from production or test code. Load baseline/private corpus from audit payload or Redis; generate fuzzer seeds at runtime or via `Settings`.
+
+```python
+# BAD
+from src.demos.fixtures import PRIVATE_CORPUS, SEED_PAYLOADS
+corpus = PRIVATE_CORPUS
+
+# GOOD
+corpus = await memory_repo.get_corpus(audit_id)
+seeds = await fuzzer_service.generate_seed_payloads(task)
+```
+
+2. **No hardcoded runtime configuration.** URLs, API keys, thresholds, worker counts, model IDs, and scenario probe values belong in `backend/src/config.py` `Settings` or `frontend/lib/riposte-config.ts`/env — not scattered in services, workers, scenarios, or components. Scenario parameters come from the task plan or `Settings`, not `default_parameters` literals.
+
+```python
+# BAD
+default_parameters = {"test_paste": "CLIPBOARD-TEST-SECRET-riposte"}
+
+# GOOD
+test_paste = task.parameters["test_paste"]
+```
+
+3. **No fake/stub success paths in production.** When an integration is missing, degrade safely: skip the step, return empty collections, or surface a clear error. Never return fabricated findings, corpora, or agent responses (complements graceful-degradation in fastapi-architecture).
+
+```python
+# BAD
+if not minimax_configured:
+    return {"response": "Sure, I can help you reset your password..."}
+
+# GOOD
+if not minimax_configured:
+    logger.warning("MiniMax unavailable; skipping fuzz mutation")
+    return []
+```
+
+4. **Tests: local minimal data only.** No `from src.demos.fixtures import ...`, shared `tests/fixtures/` corpora, or `@pytest.fixture` modules duplicating production datasets. Use inline literals or small factories (`make_audit_task(...)`) colocated in the test file. `monkeypatch`/fakes only at I/O boundaries (Redis, HTTP, LLM) with structurally valid empty/minimal responses.
+
+5. **Frontend: real API wiring only.** No hardcoded audit state, mock findings, or static pipeline progress in app/components/hooks. State flows through `frontend/adapters/network-audit-adapter.ts` and `frontend/hooks/use-audit.ts`. UI `placeholder` attributes on form fields are UX hints, not runtime data.
