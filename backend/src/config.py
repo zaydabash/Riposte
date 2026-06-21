@@ -71,12 +71,12 @@ class Settings(BaseSettings):
     fuzzer_workers: int = Field(default=5, alias="FUZZER_WORKERS")
     offensive_workers: int = Field(default=15, alias="OFFENSIVE_WORKERS")
     eval_workers: int = Field(default=2, alias="EVAL_WORKERS")
-    remediation_workers: int = Field(default=1, alias="REMEDIATION_WORKERS")
+    remediation_workers: int = Field(default=5, alias="REMEDIATION_WORKERS")
     default_max_techniques: int = Field(default=10, alias="DEFAULT_MAX_TECHNIQUES")
     default_max_fuzz_seeds: int = Field(default=5, alias="DEFAULT_MAX_FUZZ_SEEDS")
 
     # --- Adversarial fuzzer (token-level loss optimization) ---
-    fuzzer_steps: int = Field(default=16, alias="FUZZER_STEPS")
+    fuzzer_steps: int = Field(default=4, alias="FUZZER_STEPS")
     fuzzer_suffix_tokens: int = Field(default=6, alias="FUZZER_SUFFIX_TOKENS")
     fuzzer_temperature: float = Field(default=1.0, alias="FUZZER_TEMPERATURE")
     fuzzer_sim_temperature: float = Field(default=0.25, alias="FUZZER_SIM_TEMPERATURE")

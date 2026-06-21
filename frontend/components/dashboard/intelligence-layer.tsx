@@ -175,7 +175,7 @@ export function IntelligenceLayer({
             Remediation Queue
           </h3>
         </div>
-        {remediations.length === 0 ? (
+        {remediations.length === 0 && !remediationsPending ? (
           <p className="font-mono text-[10px] leading-snug text-muted">
             No repair proposals yet. Critical control failures trigger HITL PRs (awaiting human merge).
           </p>
@@ -187,6 +187,14 @@ export function IntelligenceLayer({
               compact ? "min-h-0 flex-1" : "max-h-48",
             )}
           >
+            {remediationsPending && (
+               <li className="border border-accent/40 bg-accent/10 p-2 animate-pulse">
+                 <div className="flex items-center gap-2">
+                   <span className="font-mono text-[10px] text-accent">GENERATING PATCH...</span>
+                 </div>
+                 <p className="mt-0.5 font-mono text-[10px] text-muted">MiniMax is analyzing the critical payload and preparing a PR.</p>
+               </li>
+            )}
             {remediations.map((r) => (
               <li
                 key={remediationKey(r)}
