@@ -10,10 +10,46 @@ import type { AuditConfig } from "@/ports/audit-service";
 const DEFAULT_API_URL =
   process.env.NEXT_PUBLIC_RIPOSTE_API_URL ?? "http://127.0.0.1:8000";
 
+/**
+ * Defensive control: validate and normalize a user/env-supplied API base URL.
+ * Only http(s) schemes are permitted, and the value must be a well-formed URL.
+ * Returns a sanitized, normalized URL string, or null if the input is unsafe.
+ */
+function sanitizeApiBaseUrl(raw: string): string | null {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return null;
+
+  // Reject control characters / whitespace embedded in the URL.
+  if (/[\u0000-\u001F\u007F\s]/.test(trimmed)) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+
+  // Enforce an allowlist of safe schemes to prevent javascript:, data:,
+  // file:, etc. (mitigates SSRF/scheme-confusion vectors).
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return null;
+  }
+
+  // Must have a hostname; embedded credentials are not allowed.
+  if (!parsed.hostname || parsed.username || parsed.password) {
+    return null;
+  }
+
+  // Normalize: drop fragments; return the canonical origin + path (no trailing slash).
+  parsed.hash = "";
+  const normalized = parsed.toString().replace(/\/+$/, "");
+  return normalized;
+}
+
 /** Initial *form* values (user input state). The hook still validates on Start. */
 function initialConfig(): AuditConfig {
   return {
-    apiBaseUrl: DEFAULT_API_URL,
+    apiBaseUrl: sanitizeApiBaseUrl(DEFAULT_API_URL) ?? "http://127.0.0.1:8000",
     targetName: "",
     targetEndpoint: "",
     sourceRepository: "",
@@ -39,17 +75,30 @@ export default function DashboardPage() {
 
   // Probe integration health when the API URL is known/changes.
   useEffect(() => {
-    if (config.apiBaseUrl.trim()) refreshHealth(config.apiBaseUrl);
+    const safeUrl = sanitizeApiBaseUrl(config.apiBaseUrl);
+    if (safeUrl) refreshHealth(safeUrl);
   }, [config.apiBaseUrl, refreshHealth]);
 
   const handleStart = () => {
-    refreshHealth(config.apiBaseUrl);
-    initializeAudit(config);
+    const safeUrl = sanitizeApiBaseUrl(config.apiBaseUrl);
+    if (!safeUrl) {
+      // Refuse to start against an unsafe/invalid API base URL.
+      return;
+    }
+    const safeConfig: AuditConfig = { ...config, apiBaseUrl: safeUrl };
+    refreshHealth(safeUrl);
+    initializeAudit(safeConfig);
   };
 
   const handleReset = () => {
     reset();
-    setConfig((c) => ({ ...initialConfig(), apiBaseUrl: c.apiBaseUrl }));
+    setConfig((c) => {
+      const safeUrl = sanitizeApiBaseUrl(c.apiBaseUrl);
+      return {
+        ...initialConfig(),
+        apiBaseUrl: safeUrl ?? initialConfig().apiBaseUrl,
+      };
+    });
   };
 
   return (
